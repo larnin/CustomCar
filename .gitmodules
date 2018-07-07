@@ -1,0 +1,7 @@
+[submodule "Spectrum"]
+	path = Spectrum
+	url = https://github.com/Ciastex/Spectrum
+	ignore = dirty
+[submodule "Harmony"]
+	path = Harmony
+	url = https://github.com/pardeike/Harmony
