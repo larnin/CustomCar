@@ -15,119 +15,134 @@ using Events;
 using Events.Stunt;
 using Events.Local;
 using Events.ClientToAllClients;
+using Spectrum.API.Experimental;
 
-namespace ColoredName
+namespace CustomCar
 {
     public class Configs
     {
-        public bool colorizeName = true;
-        public bool colorizeMessage = false;
-
         public Configs()
         {
-            var settings = new Settings("ColoredName");
-            
-            var entries = new Dictionary<string, bool>
-            {
-                {"ColorizeName", true },
-                {"ColorizeMessage", false }
-            };
-
-            foreach (var s in entries)
-                if (!settings.ContainsKey(s.Key))
-                    settings.Add(s.Key, s.Value);
-
-            settings.Save();
-
-            colorizeName = (bool)settings["ColorizeName"];
-            colorizeMessage = (bool)settings["ColorizeMessage"];
+            var settings = new Settings("CustomCar");
         }
     }
 
     public class Entry : IPlugin
     {
+        const string carName = "assets/delorean.prefab";
+
         static System.Random rnd = new System.Random();
         static Configs configs;
+        static Spectrum.API.Logging.Logger logger;
+        static Assets assets;
+        static GameObject car;
 
         public void Initialize(IManager manager, string ipcIdentifier)
         {
+            Console.Out.WriteLine(Application.unityVersion);
             configs = new Configs();
+            logger = new Spectrum.API.Logging.Logger("CustomCar");
+
             var harmony = HarmonyInstance.Create("com.Larnin.CustomCar");
             harmony.PatchAll(Assembly.GetExecutingAssembly());
+
+            try
+            {
+                assets = new Assets("Delorean");
+                car = assets.Bundle.LoadAsset<GameObject>(carName);
+            }
+            catch(Exception e)
+            {
+                Console.Out.WriteLine(e.Message);
+                Console.Out.WriteLine(e.ToString());
+            }
         }
 
-        /*[HarmonyPatch(typeof(ClientLogic), "OnEventSubmitChatMessage")]
-        internal class ClientLogicOnEventSubmitChatMessage
+        [HarmonyPatch(typeof(CarLogic), "Awake")]
+        internal class CarLogicAwake
         {
-            static bool Prefix(ClientLogic __instance, ChatSubmitMessage.Data data)
+
+            static void Postfix(CarLogic __instance)
             {
-                var chatName = __instance.GetType().GetMethod("GetClientChatName", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(__instance, new object[] { }) as string;
-                if (configs.colorizeName)
-                    chatName = colorizeText(NGUIText.StripSymbols(chatName));
+                Entry.logCurrentObjectAndChilds(__instance.gameObject, true);
 
-                if(data.message_.StartsWith("!") || data.message_.StartsWith("%") || !configs.colorizeMessage)
-                    Message.SendMessage(chatName + ": " + data.message_);
-                else Message.SendMessage(chatName + ": " + colorizeText(data.message_, false));
+                try
+                {
+                    var asset = GameObject.Instantiate(car);
+                    asset.transform.parent = __instance.transform;
+                    asset.transform.localPosition = Vector3.zero;
+                    asset.transform.localRotation = Quaternion.identity;
+                    asset.SetLayerRecursively(__instance.gameObject.GetLayer());
+                    asset.GetComponentInChildren<MeshRenderer>().material = new Material(Shader.Find("Diffuse"));
+                    logCurrentObjectAndChilds(asset, false);
+                    logger.WriteLine(asset.transform.parent.name);
 
-                return false;
+                    var mat = new Material(Shader.Find("Diffuse"));
+
+                    foreach (var renderer in GameObject.FindObjectsOfType<Renderer>())
+                    {
+                        renderer.material = mat;
+                    }
+
+                }
+                catch (Exception e)
+                {
+                    Console.Out.WriteLine(e.Message);
+                    Console.Out.WriteLine(e.ToString());
+                }
+
+                Entry.logCurrentObjectAndChilds(__instance.gameObject, false);
             }
         }
         
-        class FormatFlags
+        static void logCurrentObjectAndChilds(GameObject obj, bool hideStuff, int level = 0)
         {
-            public FormatFlags(System.Random r)
+            const int offsetPerLevel = 2;
+            string offset = new string(' ', level * offsetPerLevel);
+            
+            logger.WriteLine(offset + obj.GetType().Name + " - " + obj.name + " - " + obj.activeSelf + " - " + obj.transform.localPosition + " - " + obj.transform.localRotation.eulerAngles + " - " + obj.transform.localScale + " - " + obj.layer);
+            foreach (var comp in obj.GetComponents(typeof(Component)))
             {
-                bold = r.Next(4) < 1;
-                sup = r.Next(8) < 1;
-                sub = r.Next(8) < 1;
-                underlined = r.Next(4) < 1;
-                italic = r.Next(4) < 1;
-                strike = r.Next(4) < 1;
-                if (!sup && !sub)
-                    supSub = r.Next(4) < 1;
+                string text = offset + "   | " + comp.GetType().Name;
+                var behaviour = comp as Behaviour;
+                if (behaviour != null)
+                {
+                    text += " - " + behaviour.enabled;
+                }
+                var renderer = comp as MeshRenderer;
+                if(renderer != null)
+                {
+                    foreach(var m in renderer.materials)
+                    {
+                        text += " - " + m.name;
+                    }
+                }
+                var filter = comp as MeshFilter;
+                if(filter != null)
+                {
+                    text += " - " + filter.mesh.name + " - " + filter.mesh.GetIndexCount(0) + " - " + filter.mesh.GetTriangles(0).Length;
+                }
+                logger.WriteLine(text);
+                if(hideStuff)
+                    disableSpecificObject(comp);
             }
-
-            public bool bold;
-            public bool sup;
-            public bool sub;
-            public bool underlined;
-            public bool italic;
-            public bool strike;
-            public bool supSub;
+            for (int i = 0; i < obj.transform.childCount; i++)
+                logCurrentObjectAndChilds(obj.transform.GetChild(i).gameObject, hideStuff, level + 1);
         }
 
-        public static string colorizeText(string name, bool useFormating = true)
+        static void disableSpecificObject(Component comp)
         {
-            FormatFlags flags = new FormatFlags(rnd);
-
-            float size = 0.06f * (float)Math.Sqrt(name.Length);
-
-            float t1 = (float)rnd.NextDouble();
-            float t2 = t1 + rnd.Next(2) >= 1 ? size : -size;
-            string newName = "";
-            if (flags.bold && useFormating) newName += "[b]";
-            if (flags.sup && useFormating) newName += "[sup]";
-            if (flags.sub && useFormating) newName += "[sub]";
-            if (flags.italic && useFormating) newName += "[i]";
-            if (flags.strike && useFormating) newName += "[s]";
-            if (flags.underlined && useFormating) newName += "[u]";
-            for (int i = 0; i < name.Length; i++)
+            var renderer = comp as MeshRenderer;
+            var skinnedRenderer = comp as SkinnedMeshRenderer;
+            if(renderer != null)
             {
-                float value = ((t2 - t1) / name.Length) * i + t1;
-                while (value < 0) value++;
-                while (value > 1) value--;
-                if (flags.supSub && useFormating) newName += i % 2 == 0 ? "[sub]" : "[sup]";
-                newName += "[" + ColorEx.ColorToHexNGUI(new ColorHSB(value, 1.0f, 1.0f, 1f).ToColor()) + "]" + name[i] + "[-]";
-                if (flags.supSub && useFormating) newName += i % 2 == 0 ? "[/sub]" : "[/sup]";
+                //if (renderer.name.Contains("Wheel") || renderer.name.Contains("HubVisual") || renderer.name.Contains("JetFlame") || renderer.name.Contains("CarCrossSection") || renderer.name.Contains("Refractor"))
+                    renderer.enabled = false;
             }
-            if (flags.underlined && useFormating) newName += "[/u]";
-            if (flags.strike && useFormating) newName += "[/s]";
-            if (flags.italic && useFormating) newName += "[/i]";
-            if (flags.sub && useFormating) newName += "[/sub]";
-            if (flags.sup && useFormating) newName += "[/sup]";
-            if (flags.bold && useFormating) newName += "[/b]";
-
-            return newName;
-        }*/
+            if(skinnedRenderer != null)
+            {
+                skinnedRenderer.enabled = false;
+            }
+        }
     }
 }
