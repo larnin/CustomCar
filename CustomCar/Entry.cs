@@ -21,15 +21,29 @@ namespace CustomCar
 {
     public class Configs
     {
+        public string carName;
         public Configs()
         {
             var settings = new Settings("CustomCar");
+
+            var entries = new Dictionary<string, string>
+            {
+                {"CarName", "Random" },
+            };
+
+            foreach (var s in entries)
+                if (!settings.ContainsKey(s.Key))
+                    settings.Add(s.Key, s.Value);
+
+            settings.Save();
+
+            carName = (string)settings["CarName"];
         }
     }
 
     public class Entry : IPlugin
     {
-        const string carName = "Assets/Prefabs/NitronicCycle.prefab";
+        const string carBaseName = "Assets/Prefabs/NitronicCycle.prefab";
 
         static System.Random rnd = new System.Random();
         static Configs configs;
@@ -39,23 +53,17 @@ namespace CustomCar
 
         public void Initialize(IManager manager, string ipcIdentifier)
         {
-            Console.Out.WriteLine(Application.unityVersion);
+            //Console.Out.WriteLine(Application.unityVersion);
+
             configs = new Configs();
             logger = new Spectrum.API.Logging.Logger("CustomCar");
 
             var harmony = HarmonyInstance.Create("com.Larnin.CustomCar");
             harmony.PatchAll(Assembly.GetExecutingAssembly());
 
-            try
-            {
-                assets = new Assets("cars");
-                car = assets.Bundle.LoadAsset<GameObject>(carName);
-            }
-            catch(Exception e)
-            {
-                Console.Out.WriteLine(e.Message);
-                Console.Out.WriteLine(e.ToString());
-            }
+
+            assets = new Assets("cars");
+            loadCar();
         }
 
         [HarmonyPatch(typeof(CarLogic), "Awake")]
@@ -142,6 +150,35 @@ namespace CustomCar
             {
                 skinnedRenderer.enabled = false;
             }
+        }
+
+        static void loadCar()
+        {
+            List<String> validNames = new List<string>();
+            foreach (var name in assets.Bundle.GetAllAssetNames())
+                if (name.EndsWith(".prefab"))
+                    validNames.Add(name);
+
+            string fullName = "";
+
+            if (configs.carName.ToLower() == "random")
+                fullName = validNames[rnd.Next(validNames.Count)];
+            else
+            {
+                foreach(var name in validNames)
+                {
+                    if(name.ToLower().Contains(configs.carName.ToLower()))
+                    {
+                        fullName = name;
+                        break;
+                    }
+                }
+            }
+
+            if(fullName == "")
+                fullName = validNames[rnd.Next(validNames.Count)];
+
+            car = assets.Bundle.LoadAsset<GameObject>(fullName);
         }
     }
 }
