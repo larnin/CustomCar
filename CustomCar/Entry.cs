@@ -29,7 +29,7 @@ namespace CustomCar
 
     public class Entry : IPlugin
     {
-        const string carName = "assets/delorean.prefab";
+        const string carName = "Assets/Prefabs/NitronicCycle.prefab";
 
         static System.Random rnd = new System.Random();
         static Configs configs;
@@ -48,7 +48,7 @@ namespace CustomCar
 
             try
             {
-                assets = new Assets("Delorean");
+                assets = new Assets("cars");
                 car = assets.Bundle.LoadAsset<GameObject>(carName);
             }
             catch(Exception e)
@@ -71,18 +71,17 @@ namespace CustomCar
                     var asset = GameObject.Instantiate(car);
                     asset.transform.parent = __instance.transform;
                     asset.transform.localPosition = Vector3.zero;
-                    asset.transform.localRotation = Quaternion.identity;
+                    asset.transform.localRotation = Quaternion.Euler(0, 180, 0);
                     asset.SetLayerRecursively(__instance.gameObject.GetLayer());
-                    asset.GetComponentInChildren<MeshRenderer>().material = new Material(Shader.Find("Diffuse"));
                     logCurrentObjectAndChilds(asset, false);
                     logger.WriteLine(asset.transform.parent.name);
 
-                    var mat = new Material(Shader.Find("Diffuse"));
+                    /*var mat = new Material(Shader.Find("Diffuse"));
 
                     foreach (var renderer in GameObject.FindObjectsOfType<Renderer>())
                     {
                         renderer.material = mat;
-                    }
+                    }*/
 
                 }
                 catch (Exception e)
