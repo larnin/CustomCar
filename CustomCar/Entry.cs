@@ -1,21 +1,13 @@
-﻿using Spectrum.API;
-using Spectrum.API.Interfaces.Plugins;
+﻿using Spectrum.API.Interfaces.Plugins;
 using Spectrum.API.Interfaces.Systems;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
 using Spectrum.API.Configuration;
-using System.IO;
 using Harmony;
 using System.Reflection;
-using Events.Car;
-using Events.LocalClient;
-using Events;
-using Events.Stunt;
-using Events.Local;
-using Events.ClientToAllClients;
 using Spectrum.API.Experimental;
+using UnityEngine.UI;
 
 namespace CustomCar
 {
@@ -41,7 +33,7 @@ namespace CustomCar
         }
     }
 
-    public class Entry : IPlugin
+    public class Entry : IPlugin, IUpdatable
     {
         const string carBaseName = "Assets/Prefabs/NitronicCycle.prefab";
 
@@ -60,7 +52,6 @@ namespace CustomCar
 
             var harmony = HarmonyInstance.Create("com.Larnin.CustomCar");
             harmony.PatchAll(Assembly.GetExecutingAssembly());
-
 
             assets = new Assets("cars");
             loadCar();
@@ -101,12 +92,12 @@ namespace CustomCar
                 Entry.logCurrentObjectAndChilds(__instance.gameObject, false);
             }
         }
-        
+
         static void logCurrentObjectAndChilds(GameObject obj, bool hideStuff, int level = 0)
         {
             const int offsetPerLevel = 2;
             string offset = new string(' ', level * offsetPerLevel);
-            
+
             logger.WriteLine(offset + obj.GetType().Name + " - " + obj.name + " - " + obj.activeSelf + " - " + obj.transform.localPosition + " - " + obj.transform.localRotation.eulerAngles + " - " + obj.transform.localScale + " - " + obj.layer);
             foreach (var comp in obj.GetComponents(typeof(Component)))
             {
@@ -117,20 +108,20 @@ namespace CustomCar
                     text += " - " + behaviour.enabled;
                 }
                 var renderer = comp as MeshRenderer;
-                if(renderer != null)
+                if (renderer != null)
                 {
-                    foreach(var m in renderer.materials)
+                    foreach (var m in renderer.materials)
                     {
                         text += " - " + m.name;
                     }
                 }
                 var filter = comp as MeshFilter;
-                if(filter != null)
+                if (filter != null)
                 {
                     text += " - " + filter.mesh.name + " - " + filter.mesh.GetIndexCount(0) + " - " + filter.mesh.GetTriangles(0).Length;
                 }
                 logger.WriteLine(text);
-                if(hideStuff)
+                if (hideStuff)
                     disableSpecificObject(comp);
             }
             for (int i = 0; i < obj.transform.childCount; i++)
@@ -141,12 +132,12 @@ namespace CustomCar
         {
             var renderer = comp as MeshRenderer;
             var skinnedRenderer = comp as SkinnedMeshRenderer;
-            if(renderer != null)
+            if (renderer != null)
             {
                 //if (renderer.name.Contains("Wheel") || renderer.name.Contains("HubVisual") || renderer.name.Contains("JetFlame") || renderer.name.Contains("CarCrossSection") || renderer.name.Contains("Refractor"))
-                    renderer.enabled = false;
+                renderer.enabled = false;
             }
-            if(skinnedRenderer != null)
+            if (skinnedRenderer != null)
             {
                 skinnedRenderer.enabled = false;
             }
@@ -165,9 +156,9 @@ namespace CustomCar
                 fullName = validNames[rnd.Next(validNames.Count)];
             else
             {
-                foreach(var name in validNames)
+                foreach (var name in validNames)
                 {
-                    if(name.ToLower().Contains(configs.carName.ToLower()))
+                    if (name.ToLower().Contains(configs.carName.ToLower()))
                     {
                         fullName = name;
                         break;
@@ -175,10 +166,51 @@ namespace CustomCar
                 }
             }
 
-            if(fullName == "")
+            if (fullName == "")
                 fullName = validNames[rnd.Next(validNames.Count)];
 
             car = assets.Bundle.LoadAsset<GameObject>(fullName);
+        }
+
+        public void Update()
+        {
+            CustomCarTimerHUD();
+            CustomCarOverheatHUD();
+        }
+
+        public void CustomCarTimerHUD()
+        {
+            GameObject CustomCountdown = GameObject.Find("CustomCar_Countdown");
+            GameObject SourceCountdown = GameObject.Find("RefractorScreen/Time");
+
+            if ((SourceCountdown != null && SourceCountdown.HasComponent<TextMesh>()) &&
+                (CustomCountdown != null && CustomCountdown.HasComponent<TextMesh>()))
+            {
+                CustomCountdown.GetComponent<TextMesh>().text = SourceCountdown.GetComponent<TextMesh>().text;
+            }
+        }
+
+        public void CustomCarOverheatHUD()
+        {
+            CarLogic Car = GetCarLogic();
+            float Heat = Car != null ? Car.Heat_ : 0;
+
+            GameObject CustomHud = GameObject.Find("CustomCar_Overheat");
+            if (CustomHud != null && CustomHud.HasComponent<Slider>())
+            {
+                CustomHud.GetComponent<Slider>().value = Heat;
+            }
+
+        }
+
+        // From Spectrum Heat Plugin
+        // Utilities, taken from Spectrum's LocalVehicle
+        private static CarLogic GetCarLogic()
+        {
+            var carLogic = G.Sys.PlayerManager_?.Current_?.playerData_?.Car_?.GetComponent<CarLogic>();
+            if (carLogic == null)
+                carLogic = G.Sys.PlayerManager_?.Current_?.playerData_?.CarLogic_;
+            return carLogic;
         }
     }
 }
