@@ -1,9 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2027
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A183AD18-B1EC-4C39-B3A8-4969B0D5B084}"
+	ProjectSection(SolutionItems) = preProject
+		Solution Items\0Harmony.dll = Solution Items\0Harmony.dll
+		Solution Items\JsonFx.dll = Solution Items\JsonFx.dll
+		Solution Items\UnityEngine.UI.dll = Solution Items\UnityEngine.UI.dll
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CustomCar", "CustomCar\CustomCar.csproj", "{7EE4C9FC-1060-486E-86E4-5FB8FEF570FF}"
 EndProject

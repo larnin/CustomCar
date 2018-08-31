@@ -31,17 +31,22 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>..\Solution Items\0Harmony.dll</HintPath>
+    </Reference>
     <Reference Include="Assembly-CSharp, Version=9.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Spectrum\Spectrum.Dependencies\Assembly-CSharp.dll</HintPath>
     </Reference>
-    <Reference Include="JsonFx, Version=2.0.1209.2802, Culture=neutral, PublicKeyToken=315052dd637f8a52, processorArchitecture=MSIL">
-      <HintPath>..\packages\JsonFx.2.0.1209.2802\lib\net35\JsonFx.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="JsonFx">
+      <HintPath>..\Solution Items\JsonFx.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="UnityEngine">
       <HintPath>..\Spectrum\Spectrum.Dependencies\UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>..\Solution Items\UnityEngine.UI.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -57,10 +62,6 @@
   </Target>
   -->
   <ItemGroup>
-    <ProjectReference Include="..\Harmony\Harmony\Harmony.csproj">
-      <Project>{69AEE16A-B6E7-4642-8081-3928B32455DF}</Project>
-      <Name>Harmony</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Spectrum\Spectrum.API\Spectrum.API.csproj">
       <Project>{a9cfd86d-1604-4c80-b02b-e60ad98ba86f}</Project>
       <Name>Spectrum.API</Name>
