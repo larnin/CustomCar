@@ -51,6 +51,12 @@ namespace CustomCar
         static Assets assets;
         static GameObject car;
 
+        static Mesh carMesh;
+        static Texture2D carDiffuse;
+        static Texture2D carEmissive;
+        static Texture2D carNormal;
+        static Material carMat;
+
         public void Initialize(IManager manager, string ipcIdentifier)
         {
             //Console.Out.WriteLine(Application.unityVersion);
@@ -72,7 +78,10 @@ namespace CustomCar
 
             static void Postfix(CarLogic __instance)
             {
+                Entry.logger.WriteLine("\n\n---------------------------------\n" + __instance.gameObject.name + "\n---------------------------------\n\n");
                 Entry.logCurrentObjectAndChilds(__instance.gameObject, true);
+
+                //changeCar(__instance.gameObject);
 
                 try
                 {
@@ -81,8 +90,9 @@ namespace CustomCar
                     asset.transform.localPosition = Vector3.zero;
                     asset.transform.localRotation = Quaternion.Euler(0, 180, 0);
                     asset.SetLayerRecursively(__instance.gameObject.GetLayer());
-                    logCurrentObjectAndChilds(asset, false);
                     logger.WriteLine(asset.transform.parent.name);
+                    var renderer = asset.GetComponentInChildren<MeshRenderer>();
+                    renderer.material = carMat;
 
                     /*var mat = new Material(Shader.Find("Diffuse"));
 
@@ -97,8 +107,6 @@ namespace CustomCar
                     Console.Out.WriteLine(e.Message);
                     Console.Out.WriteLine(e.ToString());
                 }
-
-                Entry.logCurrentObjectAndChilds(__instance.gameObject, false);
             }
         }
         
@@ -121,7 +129,15 @@ namespace CustomCar
                 {
                     foreach(var m in renderer.materials)
                     {
-                        text += " - " + m.name;
+                        text += logMaterial(m, level);
+                    }
+                }
+                var skinnedRenderer = comp as SkinnedMeshRenderer;
+                if (skinnedRenderer != null)
+                {
+                    foreach (var m in skinnedRenderer.materials)
+                    {
+                        text += logMaterial(m, level);
                     }
                 }
                 var filter = comp as MeshFilter;
@@ -148,16 +164,56 @@ namespace CustomCar
             }
             if(skinnedRenderer != null)
             {
+                if (skinnedRenderer.gameObject.name == "Refractor")
+                {
+                    carMat = skinnedRenderer.materials[2];
+                    carMat.SetTexture(5, carDiffuse);
+                    carMat.SetTexture(242, carEmissive);
+                    carMat.SetVector(159, new Vector4(1, -1, 0, 0));
+                    carMat.SetVector(160, new Vector4(1, -1, 0, 0));
+                    carMat.SetVector(393, new Vector4(1, -1, 0, 0));
+                    carMat.SetVector(401, new Vector4(1, -1, 0, 0));
+                    carMat.SetVector(403, new Vector4(1, -1, 0, 0));
+                }
                 skinnedRenderer.enabled = false;
             }
+        }
+
+        static string logMaterial(Material m, int level)
+        {
+            const int offsetPerLevel = 2;
+            string text = "\n" + new string(' ', level * offsetPerLevel) + "     * " + m.name + " " + m.shader.name + "\n";
+
+            for (int i = 0; i < 10000; i++)
+            {
+                if (m.HasProperty(i))
+                {
+                    text += i ;
+                    text += " c " + m.GetColor(i);
+                    text += " ca " + m.GetColorArray(i);
+                    text += " f " + m.GetFloat(i);
+                    text += " fa " + m.GetFloatArray(i);
+                    text += " m " + m.GetMatrix(i).ToString().Replace('\n', '/');
+                    text += " ma " + m.GetMatrixArray(i);
+                    text += " t " + m.GetTexture(i);
+                    text += " v " + m.GetVector(i);
+                    text += " va " + m.GetVectorArray(i);
+                    text += "\n";
+                }
+            }
+
+            return text;
         }
 
         static void loadCar()
         {
             List<String> validNames = new List<string>();
             foreach (var name in assets.Bundle.GetAllAssetNames())
+            {
+                logger.WriteLine(name);
                 if (name.EndsWith(".prefab"))
                     validNames.Add(name);
+            }
 
             string fullName = "";
 
@@ -179,6 +235,55 @@ namespace CustomCar
                 fullName = validNames[rnd.Next(validNames.Count)];
 
             car = assets.Bundle.LoadAsset<GameObject>(fullName);
+
+            carMesh = assets.Bundle.LoadAsset<Mesh>("assets/models/delorean.obj");
+            carDiffuse = assets.Bundle.LoadAsset<Texture2D>("assets/textures/deloreandiffuse1024.tga");
+            carEmissive = assets.Bundle.LoadAsset<Texture2D>("assets/textures/deloreanemit1024.tga");
+            carNormal = assets.Bundle.LoadAsset<Texture2D>("assets/textures/deloreannormal1024.tga");
+        }
+
+        static void changeCar(GameObject obj)
+        {
+            for (int i = 0; i < obj.transform.childCount; i++)
+                changeCar(obj.transform.GetChild(i).gameObject);
+
+            if(obj.name == "Refractor")
+            {
+                var skinned = obj.GetComponent<SkinnedMeshRenderer>();
+                skinned.enabled = false;
+
+                /*var mat = skinned.material;
+                obj.RemoveComponent<SkinnedMeshRenderer>();
+
+                var renderer = obj.AddComponent<MeshRenderer>();
+                var filter = obj.AddComponent<MeshFilter>();
+                mat.SetTexture(5, carDiffuse);
+                renderer.material = mat;
+                filter.mesh = carMesh;*/
+
+                /*skinned.BakeMesh(carMesh);
+                var mesh = skinned.sharedMesh;
+
+                mesh.SetIndices(carMesh.GetIndices(0), carMesh.GetTopology(0), 0);
+                mesh.SetTriangles(carMesh.GetTriangles(0), 0);
+
+                List<Vector4> tangents = new List<Vector4>();
+                carMesh.GetTangents(tangents);
+                mesh.SetTangents(tangents);
+
+                List<Vector3> normals = new List<Vector3>();
+                carMesh.GetNormals(normals);
+                mesh.SetNormals(normals);
+
+                List<Vector2> uvs = new List<Vector2>();
+                carMesh.GetUVs(0, uvs);
+                mesh.SetUVs(0, uvs);
+
+                foreach(var m in skinned.materials)
+                    m.SetTexture(5, carDiffuse);
+
+                skinned.BakeMesh(mesh);*/
+            }
         }
     }
 }
