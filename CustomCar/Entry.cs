@@ -43,7 +43,7 @@ namespace CustomCar
     {
         public void Initialize(IManager manager, string ipcIdentifier)
         {
-            //LogCarPrefabs.logCars();
+            LogCarPrefabs.logCars();
 
             var harmony = HarmonyInstance.Create("com.Larnin.CustomCar");
             harmony.PatchAll(Assembly.GetExecutingAssembly());

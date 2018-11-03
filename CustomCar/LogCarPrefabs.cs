@@ -385,19 +385,27 @@ namespace CustomCar
         class CustomInfoSkinnedMeshRenderer : CustomInfoBase
         {
             public List<MaterialInfo> materials = new List<MaterialInfo>();
-            public int bonesNb;
             public Mesh sharedMesh;
+            public string rootBoneName;
+            public List<string> boneNames = new List<string>();
 
             public override string toJson()
             {
                 if (!allMeshs.Contains(sharedMesh))
                     allMeshs.Add(sharedMesh);
 
-                string s = "{\"bonesNb\":" + bonesNb + ",\"sharedMesh\":" + JsonEx.toJson(sharedMesh) + ",\"materials\":[";
+                string s = "{\"rootBone\":\"" + rootBoneName + "\",\"sharedMesh\":" + JsonEx.toJson(sharedMesh) + ",\"materials\":[";
                 for (int i = 0; i < materials.Count; i++)
                 {
                     s += materials[i].toJson();
                     if (i < materials.Count - 1)
+                        s += ",";
+                }
+                s += "],\"bones\":[";
+                for(int i = 0; i < boneNames.Count; i++)
+                {
+                    s += "\"" + boneNames[i] + "\"";
+                    if (i < boneNames.Count - 1)
                         s += ",";
                 }
                 return s + "]}";
@@ -417,6 +425,42 @@ namespace CustomCar
                     allMeshs.Add(mesh);
 
                 return "{\"mesh\":" + JsonEx.toJson(mesh) + ",\"sharedMesh\":" + JsonEx.toJson(sharedMesh) + "}";
+            }
+        }
+
+        class CustomInfoTransform : CustomInfoBase
+        {
+            public Vector3 position;
+            public Vector3 scale;
+            public Quaternion rotation;
+
+            public override string toJson()
+            {
+                Vector3 rot = rotation.eulerAngles;
+
+                return "{\"position\":[" + position.x + "," + position.y + "," + position.z + "],\"rotation\":[" + rot.x + "," + rot.y + "," + rot.z
+                    + "],\"scale\":[" + scale.x + "," + scale.y + "," + scale.z + "]}";
+            }
+        }
+
+        class CustomInfoAnimation : CustomInfoBase
+        {
+            public List<AnimationState> animations = new List<AnimationState>();
+
+            public override string toJson()
+            {
+                string s = "{\"clips\":[";
+                for(int i = 0; i < animations.Count; i++)
+                {
+                    var state = animations[i];
+                    var clip = state.clip;
+                    s += "{\"name\":\"" + state.name + "\",\"clipName\":\"" + clip.name + "\",\"lenght\":" + clip.length + ",\"framerate\":" + clip.frameRate + ",\"speed\":" + state.speed
+                        + ",\"weight\":" + state.weight + "}";
+
+                    if (i < animations.Count - 1)
+                        s += ",";
+                }
+                return s + "]}";
             }
         }
 
@@ -580,8 +624,29 @@ namespace CustomCar
                 return getMeshRendererInfos(comp as SkinnedMeshRenderer);
             else if (comp is MeshFilter)
                 return getMeshFilterInfos(comp as MeshFilter);
+            else if (comp is Transform)
+                return getTransformInfos(comp as Transform);
+            else if (comp is Animation)
+                return getAnimationInfos(comp as Animation);
 
             return null;
+        }
+
+        static CustomInfoTransform getTransformInfos(Transform t)
+        {
+            CustomInfoTransform data = new CustomInfoTransform();
+            data.position = t.localPosition;
+            data.rotation = t.localRotation;
+            data.scale = t.localScale;
+            return data;
+        }
+
+        static CustomInfoAnimation getAnimationInfos(Animation a)
+        {
+            CustomInfoAnimation data = new CustomInfoAnimation();
+            foreach (AnimationState state in a)
+                data.animations.Add(state);
+            return data;
         }
 
         static CustomInfoMeshRenderer getMeshRendererInfos(MeshRenderer m)
@@ -597,8 +662,10 @@ namespace CustomCar
             CustomInfoSkinnedMeshRenderer data = new CustomInfoSkinnedMeshRenderer();
             foreach (var mat in m.materials)
                 data.materials.Add(getMaterialInfos(mat));
-            data.bonesNb = m.bones.Length;
+            foreach (var b in m.bones)
+                data.boneNames.Add(b.name);
             data.sharedMesh = m.sharedMesh;
+            data.rootBoneName = m.rootBone != null ? m.rootBone.name : "null";
             return data;
         }
 
