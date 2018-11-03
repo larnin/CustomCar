@@ -39,11 +39,14 @@ namespace CustomCar
         }
     }
 
-    public class Entry : IPlugin
+    public class Entry : IPlugin, IUpdatable
     {
         public void Initialize(IManager manager, string ipcIdentifier)
         {
             //LogCarPrefabs.logCars();
+
+            var harmony = HarmonyInstance.Create("com.Larnin.CustomCar");
+            harmony.PatchAll(Assembly.GetExecutingAssembly());
 
             var profileManager = G.Sys.ProfileManager_;
             var oldCars = profileManager.carInfos_.ToArray();
@@ -61,13 +64,46 @@ namespace CustomCar
                 var car = new CarInfo();
                 car.name_ = "Wtf is that " + i + " ?";
                 car.prefabs_ = oldCars[0].prefabs_;
+                car.prefabs_.screenPrefab_ = null;
                 car.colors_ = oldCars[0].colors_;
                 profileManager.carInfos_[i] = car;
                 unlocked.Add(car.name_, i);
             }
 
-            var harmony = HarmonyInstance.Create("com.Larnin.CustomCar");
-            harmony.PatchAll(Assembly.GetExecutingAssembly());
+            var carColors = new CarColors[Constants.carNb];
+            for (int i = 0; i < carColors.Length; i++)
+                carColors[i] = G.Sys.ProfileManager_.carInfos_[i].colors_;
+
+            for (int i = 0; i < profileManager.ProfileCount_; i++)
+            {
+                Profile p = profileManager.GetProfile(i);
+
+                var field = p.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic);
+                field.SetValue(p, carColors);
+            }
+        }
+        
+        int currentIndex = 0;
+
+        public void Update()
+        {
+            //if(currentIndex < LogCarPrefabs.allTextures.Count)
+            //{
+            //    Texture t = LogCarPrefabs.allTextures[currentIndex];
+
+            //    LogCarPrefabs.saveTextureToFile(t, t.name + ".png");
+            //    Console.Out.WriteLine("saved texture " + t.name);
+            //    currentIndex++;
+            //}
+
+            //if (currentIndex < LogCarPrefabs.allMeshs.Count)
+            //{
+            //    Mesh m = LogCarPrefabs.allMeshs[currentIndex];
+
+            //    ObjExporter.MeshToFile(m, Application.dataPath + "/exportedMeshs/" + m.name + ".obj");
+            //    Console.Out.WriteLine("saved obj " + m.name);
+            //    currentIndex++;
+            //}
         }
     }
 

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using UnityEngine;
@@ -278,7 +280,12 @@ namespace CustomCar
                 Console.Out.WriteLine(e.StackTrace);
                 Console.Out.WriteLine(e.ToString());
             }
+            Console.Out.WriteLine("textures nb : " + allTextures.Count);
+            Console.Out.WriteLine("mesh nb : " + allMeshs.Count);
         }
+
+        public static List<Texture> allTextures = new List<Texture>();
+        public static List<Mesh> allMeshs = new List<Mesh>();
 
         class CarList
         {
@@ -383,6 +390,9 @@ namespace CustomCar
 
             public override string toJson()
             {
+                if (!allMeshs.Contains(sharedMesh))
+                    allMeshs.Add(sharedMesh);
+
                 string s = "{\"bonesNb\":" + bonesNb + ",\"sharedMesh\":" + JsonEx.toJson(sharedMesh) + ",\"materials\":[";
                 for (int i = 0; i < materials.Count; i++)
                 {
@@ -401,6 +411,11 @@ namespace CustomCar
 
             public override string toJson()
             {
+                if (!allMeshs.Contains(sharedMesh))
+                    allMeshs.Add(sharedMesh);
+                if (!allMeshs.Contains(mesh))
+                    allMeshs.Add(mesh);
+
                 return "{\"mesh\":" + JsonEx.toJson(mesh) + ",\"sharedMesh\":" + JsonEx.toJson(sharedMesh) + "}";
             }
         }
@@ -487,7 +502,11 @@ namespace CustomCar
                     }
                 }
                 if (texture != null)
+                {
                     s += "\"texture\":\"" + texture.name + "\",";
+                    if (!allTextures.Contains(texture))
+                        allTextures.Add(texture);
+                }
 
                 s = s.Remove(s.LastIndexOf(','), 1);
                 return s + "}";
@@ -618,6 +637,30 @@ namespace CustomCar
             }
 
             return data;
+        }
+
+        public static void saveTextureToFile(Texture texture, string filename)
+        {
+            Texture2D texture2D = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false);
+
+            RenderTexture currentRT = RenderTexture.active;
+
+            RenderTexture renderTexture = new RenderTexture(texture.width, texture.height, 32);
+            Graphics.Blit(texture, renderTexture);
+
+            RenderTexture.active = renderTexture;
+            texture2D.ReadPixels(new Rect(0, 0, renderTexture.width, renderTexture.height), 0, 0);
+            texture2D.Apply();
+
+            Color[] pixels = texture2D.GetPixels();
+
+            RenderTexture.active = currentRT;
+
+            var bytes = texture2D.EncodeToPNG();
+            var file = File.Open(Application.dataPath + "/exportedTextures/" + filename, FileMode.Create);
+            var binary = new BinaryWriter(file);
+            binary.Write(bytes);
+            file.Close();
         }
 
     }
