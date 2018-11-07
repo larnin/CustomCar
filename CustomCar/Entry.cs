@@ -104,41 +104,38 @@ namespace CustomCar
             //    Console.Out.WriteLine("saved obj " + m.name);
             //    currentIndex++;
             //}
+
+            if (Input.GetKeyDown("j"))
+                startNextAnimation();
         }
-    }
 
-    //[HarmonyPatch(typeof(Profile), "GetColorsForIndex")]
-    //internal class ProfileGetColorsForIndex
-    //{
-    //    static bool Prefix(Profile __instance, ref int index)
-    //    {
-    //        try
-    //        {
-    //            var carColorsList = (CarColors[])__instance.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(__instance);
-
-    //            if (index >= carColorsList.Length)
-    //                index = 0;
-    //        }
-    //        catch(Exception e)
-    //        {
-    //            Console.Out.WriteLine(e.ToString());
-    //        }
-
-    //        return true;
-    //    }
-    //}
-
-    [HarmonyPatch(typeof(Profile), "Awake")]
-    internal class ProfileAwake
-    {
-        static void Postfix(Profile __instance)
+        static int animationIndex = 0;
+        static void startNextAnimation()
         {
-            var carColors = new CarColors[Constants.carNb];
-            for(int i = 0; i < carColors.Length; i++)
-                carColors[i] = G.Sys.ProfileManager_.carInfos_[i].colors_;
+            List<string> animations = new List<string> { "BaseAnimation", "BoostOpen", "JetOpen", "WingsOpen", "Assemble", "Overheat"};
 
-            var field = __instance.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic);
-            field.SetValue(__instance, carColors);
+            var cars = UnityEngine.Object.FindObjectsOfType<CarVisuals>();
+
+            foreach(var c in cars)
+            {
+                var a = c.GetComponentInChildren<Animation>();
+                var clip = a[animations[animationIndex]];
+                if (clip == null)
+                    a.Stop();
+                else
+                {
+                    clip.clip.wrapMode = WrapMode.Loop;
+                    a.clip = clip.clip;
+                    a.Stop();
+                    a.Play();
+                }
+            }
+
+            Console.Out.WriteLine("Playing " + animations[animationIndex]);
+
+            animationIndex++;
+            if (animationIndex >= animations.Count)
+                animationIndex = 0;
         }
     }
 }

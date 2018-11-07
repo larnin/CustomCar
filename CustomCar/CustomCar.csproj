@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Entry.cs" />
+    <Compile Include="HarmonyPatchs.cs" />
     <Compile Include="LogCarPrefabs.cs" />
     <Compile Include="ObjExporter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
