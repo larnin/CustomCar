@@ -30,7 +30,7 @@ namespace CustomCar
     {
         static void Postfix(Profile __instance)
         {
-            var carColors = new CarColors[Constants.carNb];
+            var carColors = new CarColors[G.Sys.ProfileManager_.carInfos_.Length];
             for (int i = 0; i < carColors.Length; i++)
                 carColors[i] = G.Sys.ProfileManager_.carInfos_[i].colors_;
 
