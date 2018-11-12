@@ -464,6 +464,34 @@ namespace CustomCar
             }
         }
 
+        class CustomInfoColorChanger : CustomInfoBase
+        {
+            public ColorChanger.RendererChanger[] rendererChangers;
+
+            public override string toJson()
+            {
+                string s = "{\"rendererChangers\":[";
+                for(int i = 0; i < rendererChangers.Length; i++)
+                {
+                    var rChanger = rendererChangers[i];
+                    s += "{\"renderer\":\"" + rChanger.renderer_ + "\",\"uniformChanger\":[";
+                    for(int j = 0; j < rChanger.uniformChangers_.Length; j++)
+                    {
+                        var u = rChanger.uniformChangers_[j];
+                        s += "{\"materialIndex\":" + u.materialIndex_ + ",\"colorType\":\"" + u.colorType_.ToString() + "\",\"name\":\"" + u.name_.ToString() + "\",\"mul\":" + u.mul_
+                            + ",\"alpha\":\"" + (u.alpha_ ? "true" : "false") + "\"}";
+
+                        if (j < rChanger.uniformChangers_.Length - 1)
+                            s += ",";
+                    }
+                    s += "]}";
+                    if (i < rendererChangers.Length - 1)
+                        s += ",";
+                }
+                return s + "]}";
+            }
+        }
+
         class MaterialInfo
         {
             public string materialName;
@@ -628,6 +656,8 @@ namespace CustomCar
                 return getTransformInfos(comp as Transform);
             else if (comp is Animation)
                 return getAnimationInfos(comp as Animation);
+            else if (comp is ColorChanger)
+                return getColorChangerInfos(comp as ColorChanger);
 
             return null;
         }
@@ -703,6 +733,13 @@ namespace CustomCar
                 }
             }
 
+            return data;
+        }
+
+        static CustomInfoColorChanger getColorChangerInfos(ColorChanger c)
+        {
+            CustomInfoColorChanger data = new CustomInfoColorChanger();
+            data.rendererChangers = c.rendererChangers_;
             return data;
         }
 

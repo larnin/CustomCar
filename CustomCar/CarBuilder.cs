@@ -44,8 +44,6 @@ namespace CustomCar
                 if (c.name.ToLower().Contains("wheel"))
                     wheelsToRemove.Add(c);
             }
-            foreach (var w in wheelsToRemove)
-                GameObject.Destroy(w);
 
             var refractor = obj.transform.Find("Refractor");
             if(refractor == null)
@@ -54,16 +52,53 @@ namespace CustomCar
                 return;
             }
 
-            GameObject.Destroy(refractor.gameObject);
+            GameObject boostJet = null;
+            GameObject wingJet = null;
+            GameObject rotationJet = null;
+            foreach (var j in refractor.GetComponentsInChildren<JetFlame>())
+            {
+                var name = j.gameObject.name;
+                if (name == "BoostJetFlameCenter")
+                    boostJet = j.gameObject;
+                else if (name == "JetFlameBackLeft")
+                    rotationJet = j.gameObject;
+                else if (name == "WingJetFlameLeft1")
+                    wingJet = j.gameObject;
+            }
+
+            Material baseMat = null;
+            foreach(var o in obj.GetComponentsInChildren<MeshRenderer>())
+            {
+                var mat = o.material;
+                if(mat.shader.name == "Custom/Reflective/Bump Glow LaserCut")
+                {
+                    baseMat = mat;
+                    break;
+                }
+            }
+
+            var colorChanger = obj.GetComponent<ColorChanger>();
+            if (colorChanger != null)
+                colorChanger.rendererChangers_ = new ColorChanger.RendererChanger[0];
 
             var newcar = GameObject.Instantiate(m_data.carToAdd, obj.transform);
             foreach (var r in newcar.GetComponentsInChildren<Renderer>())
-                replaceMaterials(r);
+            {
+                ReplaceMaterials(r, baseMat);
+                if(colorChanger != null)
+                    AddMaterialColorChanger(colorChanger, r.transform);
+            }
+
+            var boostJets = new List<JetFlame>();
+            var wingJets = new List<JetFlame>();
+            var rotationJets = new List<JetFlame>();
             
+            PlaceJets(newcar, boostJet, wingJet, rotationJet, boostJets, wingJets, rotationJets);
+
             var carVisual = obj.GetComponent<CarVisuals>();
-            carVisual.rotationJetFlames_ = new JetFlame[0];
-            carVisual.boostJetFlames_ = new JetFlame[0];
-            carVisual.wingJetFlames_ = new JetFlame[0];
+            carVisual.rotationJetFlames_ = rotationJets.ToArray();
+            carVisual.boostJetFlames_ = boostJets.ToArray();
+            carVisual.wingJetFlames_ = wingJets.ToArray();
             carVisual.lights_ = new Light[0];
             carVisual.driverPosition_ = null;
             carVisual.carBodyRenderer_ = newcar.GetComponentInChildren<SkinnedMeshRenderer>();
@@ -76,13 +111,7 @@ namespace CustomCar
                 {
                     wheelsToMove.Add(c.transform);
                     var wheelRenderer = c.GetComponentInChildren<MeshRenderer>();
-                    CarWheelVisuals comp /*= null;
-                    if(wheelRenderer != null)
-                    {
-                        comp = wheelRenderer.gameObject.AddComponent<CarWheelVisuals>();
-                        comp.tire_ = wheelRenderer;
-                    }
-                    else comp */= c.AddComponent<CarWheelVisuals>();
+                    CarWheelVisuals comp = c.AddComponent<CarWheelVisuals>();
                     comp.tire_ = c.GetComponentInChildren<MeshRenderer>();
                     if (carVisual != null)
                     {
@@ -103,23 +132,25 @@ namespace CustomCar
                     }
                 }
             }
-            foreach(var c in wheelsToMove)
-                c.transform.parent = obj.transform;
+
+            foreach (var w in wheelsToRemove)
+                GameObject.Destroy(w);
+            
+            GameObject.Destroy(refractor.gameObject);
         }
 
-        void replaceMaterials(Renderer r)
+        void ReplaceMaterials(Renderer r, Material baseMat)
         {
-            Shader s = Shader.Find("Custom/Reflective/Bump Glow LaserCut");
-            if (s == null)
+            if (baseMat == null)
             {
-                Console.Out.WriteLine("Can't find shader !");
+                Console.Out.WriteLine("base material is null");
                 return;
             }
 
             List<Material> newMaterials = new List<Material>();
             foreach(var m in r.materials)
             {
-                Material mat = new Material(s);
+                Material mat = UnityEngine.Object.Instantiate(baseMat);
                 mat.SetTexture(5, m.GetTexture("_MainTex")); //diffuse
                 mat.SetTexture(255, m.GetTexture("_EmissionMap")); //emissive
                 mat.SetTexture(218, m.GetTexture("_BumpMap")); //normal
@@ -128,6 +159,116 @@ namespace CustomCar
 
             for(int i = 0; i < r.materials.Length; i++)
                 r.materials[i] = newMaterials[i];
+        }
+
+        void PlaceJets(GameObject obj, GameObject boostJet, GameObject wingJet, GameObject rotationJet
+            , List<JetFlame> boostJets, List<JetFlame> wingJets, List<JetFlame> rotationJets)
+        {
+            int childNb = obj.transform.childCount;
+            for (int i = 0; i < childNb; i++)
+            {
+                var child = obj.GetChild(i).gameObject;
+                var name = child.name.ToLower();
+                if (boostJet != null && name.Contains("boostjet"))
+                {
+                    var jet = GameObject.Instantiate(boostJet, child.transform);
+                    jet.transform.localPosition = Vector3.zero;
+                    jet.transform.localRotation = Quaternion.identity;
+                    boostJets.Add(jet.GetComponentInChildren<JetFlame>());
+                }
+                else if (wingJet != null && name.Contains("wingjet"))
+                {
+                    var jet = GameObject.Instantiate(wingJet, child.transform);
+                    jet.transform.localPosition = Vector3.zero;
+                    jet.transform.localRotation = Quaternion.identity;
+                    wingJets.Add(jet.GetComponentInChildren<JetFlame>());
+                }
+                else if (rotationJet != null && name.Contains("rotationjet"))
+                {
+                    var jet = GameObject.Instantiate(rotationJet, child.transform);
+                    jet.transform.localPosition = Vector3.zero;
+                    jet.transform.localRotation = Quaternion.identity;
+                    rotationJets.Add(jet.GetComponentInChildren<JetFlame>());
+                }
+                else PlaceJets(child, boostJet, wingJet, rotationJet, boostJets, wingJets, rotationJets);
+            }
+        }
+
+        void AddMaterialColorChanger(ColorChanger colorChanger, Transform obj)
+        {
+            Renderer r = obj.GetComponent<Renderer>();
+            if (r == null)
+                return;
+
+            var uniformChangers = new List<ColorChanger.UniformChanger>();
+
+            for(int i = 0; i < obj.childCount; i++)
+            {
+                var o = obj.GetChild(i).gameObject;
+                var name = o.name;
+                if (!name.StartsWith("#"))
+                    continue;
+
+                name = name.Remove(0, 1); //remove #
+
+                var s = name.Split(';');
+                if (s.Length != 5)
+                    continue;
+
+                var uniformChanger = new ColorChanger.UniformChanger();
+                uniformChanger.colorType_ = colorType(s[0]);
+                int materialIndex = 0;
+                int.TryParse(s[1], out materialIndex);
+                uniformChanger.materialIndex_ = materialIndex;
+                uniformChanger.name_ = uniformName(s[2]);
+                float multiplier = 0;
+                float.TryParse(s[3], out multiplier);
+                uniformChanger.mul_ = multiplier;
+                uniformChanger.alpha_ = s[4].ToLower() == "true";
+
+                uniformChangers.Add(uniformChanger);
+            }
+
+            if (uniformChangers.Count == 0)
+                return;
+
+            var renderChanger = new ColorChanger.RendererChanger();
+            renderChanger.renderer_ = r;
+            renderChanger.uniformChangers_ = uniformChangers.ToArray();
+
+            var renders = colorChanger.rendererChangers_.ToList();
+            renders.Add(renderChanger);
+            colorChanger.rendererChangers_ = renders.ToArray();
+        }
+
+        ColorChanger.ColorType colorType(string name)
+        {
+            name = name.ToLower();
+            if (name == "primary")
+                return ColorChanger.ColorType.Primary;
+            else if (name == "secondary")
+                return ColorChanger.ColorType.Secondary;
+            else if (name == "glow")
+                return ColorChanger.ColorType.Glow;
+            else if (name == "sparkle")
+                return ColorChanger.ColorType.Sparkle;
+            return ColorChanger.ColorType.Primary;
+        }
+
+        MaterialEx.SupportedUniform uniformName(string name)
+        {
+            name = name.ToLower();
+            if (name == "color")
+                return MaterialEx.SupportedUniform._Color;
+            else if (name == "color2")
+                return MaterialEx.SupportedUniform._Color2;
+            else if (name == "emitcolor")
+                return MaterialEx.SupportedUniform._EmitColor;
+            else if (name == "reflectcolor")
+                return MaterialEx.SupportedUniform._ReflectColor;
+            else if (name == "speccolor")
+                return MaterialEx.SupportedUniform._SpecColor;
+            return MaterialEx.SupportedUniform._Color;
         }
     }
 }
