@@ -102,6 +102,9 @@ namespace CustomCar
             carVisual.lights_ = new Light[0];
             carVisual.driverPosition_ = null;
             carVisual.carBodyRenderer_ = newcar.GetComponentInChildren<SkinnedMeshRenderer>();
+
+            MakeMeshSkinned(carVisual.carBodyRenderer_);
+
             List<Transform> wheelsToMove = new List<Transform>();
             for(int i = 0; i < newcar.transform.childCount; i++)
             {
@@ -151,14 +154,14 @@ namespace CustomCar
             foreach(var m in r.materials)
             {
                 Material mat = UnityEngine.Object.Instantiate(baseMat);
+
                 mat.SetTexture(5, m.GetTexture("_MainTex")); //diffuse
                 mat.SetTexture(255, m.GetTexture("_EmissionMap")); //emissive
                 mat.SetTexture(218, m.GetTexture("_BumpMap")); //normal
                 newMaterials.Add(mat);
             }
-
-            for(int i = 0; i < r.materials.Length; i++)
-                r.materials[i] = newMaterials[i];
+            
+            r.materials = newMaterials.ToArray();
         }
 
         void PlaceJets(GameObject obj, GameObject boostJet, GameObject wingJet, GameObject rotationJet
@@ -239,6 +242,32 @@ namespace CustomCar
             var renders = colorChanger.rendererChangers_.ToList();
             renders.Add(renderChanger);
             colorChanger.rendererChangers_ = renders.ToArray();
+        }
+
+        void MakeMeshSkinned(SkinnedMeshRenderer renderer)
+        {
+            var mesh = renderer.sharedMesh;
+            if (mesh == null)
+            {
+                Console.Out.WriteLine("The mesh on " + renderer.name + " (SkinnedMeshRenderer) is null");
+                return;
+            }
+            if (!mesh.isReadable)
+            {
+                Console.Out.WriteLine("Can't read the car mesh " + mesh.name + "\nYou must allow read on it's unity inspector !");
+                return;
+            }
+            if (mesh.vertices.Length == mesh.boneWeights.Length)
+                return;
+
+            var bones = new BoneWeight[mesh.vertices.Length];
+            for (int i = 0; i < bones.Length; i++)
+                bones[i].weight0 = 1;
+            mesh.boneWeights = bones;
+            var t = renderer.transform;
+            var bindPoses = new Matrix4x4[1] { t.worldToLocalMatrix * renderer.transform.localToWorldMatrix };
+            mesh.bindposes = bindPoses;
+            renderer.bones = new Transform[1] { t };
         }
 
         ColorChanger.ColorType colorType(string name)
