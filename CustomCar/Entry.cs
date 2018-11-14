@@ -47,47 +47,6 @@ namespace CustomCar
             harmony.PatchAll(Assembly.GetExecutingAssembly());
 
             LoadCars();
-
-            //var profileManager = G.Sys.ProfileManager_;
-            //var oldCars = profileManager.carInfos_.ToArray();
-            //profileManager.carInfos_ = new CarInfo[Constants.carNb];
-
-            //var unlocked = (Dictionary<string, int>)profileManager.GetType().GetField("unlockedCars_", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(profileManager);
-
-            //for (int i = 0; i < profileManager.carInfos_.Length; i++)
-            //{
-            //    if (i < oldCars.Length)
-            //    {
-            //        profileManager.carInfos_[i] = oldCars[i];
-            //        continue;
-            //    }
-
-            //    var car = new CarInfo();
-            //    car.name_ = "Wtf is that " + i + " ?";
-
-            //    var carBuilder = new CarBuilder();
-            //    var data = new CarData();
-            //    data.name = car.name_;
-            //    var carPrefabs = new CarPrefabs();
-            //    carPrefabs.carPrefab_ = carBuilder.CreateCar(data, oldCars[0].prefabs_.carPrefab_);
-
-            //    car.prefabs_ = carPrefabs;
-            //    car.colors_ = oldCars[0].colors_;
-            //    profileManager.carInfos_[i] = car;
-            //    unlocked.Add(car.name_, i);
-            //}
-
-            //var carColors = new CarColors[Constants.carNb];
-            //for (int i = 0; i < carColors.Length; i++)
-            //    carColors[i] = G.Sys.ProfileManager_.carInfos_[i].colors_;
-
-            //for (int i = 0; i < profileManager.ProfileCount_; i++)
-            //{
-            //    Profile p = profileManager.GetProfile(i);
-
-            //    var field = p.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic);
-            //    field.SetValue(p, carColors);
-            //}
         }
 
         void LoadCars()
@@ -96,6 +55,7 @@ namespace CustomCar
             var files = Directory.GetFiles(dirStr);
 
             List<GameObject> cars = new List<GameObject>();
+            List<CarColors> colors = new List<CarColors>();
 
             foreach(var f in files)
             {
@@ -110,7 +70,9 @@ namespace CustomCar
                 {
                     if(n.EndsWith(".prefab"))
                     {
-                        cars.Add(loadCar(asset.Bundle.LoadAsset<GameObject>(n), name));
+                        var result = loadCar(asset.Bundle.LoadAsset<GameObject>(n), name, G.Sys.ProfileManager_.carInfos_[0].colors_);
+                        cars.Add(result.car);
+                        colors.Add(result.colors);
                         break;
                     }
 
@@ -137,7 +99,7 @@ namespace CustomCar
                 car.name_ = cars[index].name;
                 car.prefabs_ = new CarPrefabs();
                 car.prefabs_.carPrefab_ = cars[index];
-                car.colors_ = oldCars[0].colors_;
+                car.colors_ = colors[index];
                 profileManager.carInfos_[i] = car;
                 unlocked.Add(car.name_, i);
             }
@@ -155,15 +117,27 @@ namespace CustomCar
             }
         }
 
-        GameObject loadCar(GameObject obj, string name)
+        class LoadReturnValue
+        {
+            public LoadReturnValue(GameObject _car, CarColors _colors)
+            {
+                car = _car;
+                colors = _colors;
+            }
+            public GameObject car;
+            public CarColors colors;
+        }
+
+        LoadReturnValue loadCar(GameObject obj, string name, CarColors defaultColor)
         {
             var carBuilder = new CarBuilder();
             var data = new CarData();
             data.name = name;
             data.carToAdd = obj;
+            data.defaultColors = defaultColor;
             var car =  carBuilder.CreateCar(data, G.Sys.ProfileManager_.carInfos_[0].prefabs_.carPrefab_);
 
-            return car;
+            return new LoadReturnValue(car, data.defaultColors);
         }
 
         int currentIndex = 0;

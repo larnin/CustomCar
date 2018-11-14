@@ -10,6 +10,7 @@ namespace CustomCar
     {
         public string name;
         public GameObject carToAdd;
+        public CarColors defaultColors;
     }
 
     public class CarBuilder
@@ -134,6 +135,12 @@ namespace CustomCar
                         }
                     }
                 }
+
+                if (name.Contains("driverposition"))
+                    carVisual.driverPosition_ = c.transform;
+
+                if (name.Contains("defaultcolor"))
+                    loadDefaultColors(c.gameObject);
             }
 
             foreach (var w in wheelsToRemove)
@@ -268,6 +275,35 @@ namespace CustomCar
             var bindPoses = new Matrix4x4[1] { t.worldToLocalMatrix * renderer.transform.localToWorldMatrix };
             mesh.bindposes = bindPoses;
             renderer.bones = new Transform[1] { t };
+        }
+
+        void loadDefaultColors(GameObject obj)
+        {
+            for (int i = 0; i < obj.transform.childCount; i++)
+            {
+                var o = obj.transform.GetChild(i).gameObject;
+                var name = o.name.ToLower();
+
+                if (!name.StartsWith("#"))
+                    continue;
+
+                name = name.Remove(0, 1); //remove #
+
+                var s = name.Split(';');
+                if (s.Length != 2)
+                    continue;
+
+                Color c = ColorEx.HexToColor(s[1]);
+                c.a = 1;
+                if (s[0] == "primary")
+                    m_data.defaultColors.primary_ = c;
+                else if (s[0] == "secondary")
+                    m_data.defaultColors.secondary_ = c;
+                else if (s[0] == "glow")
+                    m_data.defaultColors.glow_ = c;
+                else if (s[0] == "sparkle")
+                    m_data.defaultColors.sparkle_ = c;
+            }
         }
 
         ColorChanger.ColorType colorType(string name)
