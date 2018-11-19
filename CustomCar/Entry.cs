@@ -65,18 +65,25 @@ namespace CustomCar
                 var name = f.Substring(index + 1);
                 var asset = new Assets(name);
                 assets.Add(asset);
-
+                
+                GameObject car = null;
                 foreach(var n in asset.Bundle.GetAllAssetNames())
                 {
-                    if(n.EndsWith(".prefab"))
+                    if(car == null && n.EndsWith(".prefab"))
                     {
-                        var result = loadCar(asset.Bundle.LoadAsset<GameObject>(n), name, G.Sys.ProfileManager_.carInfos_[0].colors_);
-                        cars.Add(result.car);
-                        colors.Add(result.colors);
+                        car = asset.Bundle.LoadAsset<GameObject>(n);
                         break;
+                        
                     }
-
                 }
+
+                if (car != null)
+                {
+                    var c = loadCar(car, name, G.Sys.ProfileManager_.carInfos_[0].colors_);
+                    cars.Add(c.car);
+                    colors.Add(c.colors);
+                }
+                else Console.Out.WriteLine("Can't find a prefab in " + f);
             }
 
             var profileManager = G.Sys.ProfileManager_;

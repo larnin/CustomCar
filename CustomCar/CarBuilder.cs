@@ -151,6 +151,13 @@ namespace CustomCar
 
         void ReplaceMaterials(Renderer r, Material baseMat)
         {
+            for(int i = 0; i < r.transform.childCount; i++)
+            {
+                var n = r.transform.GetChild(i).gameObject.name.ToLower();
+                if (n.StartsWith("#") && n.Contains("donotreplace"))
+                    return;
+            }
+
             if (baseMat == null)
             {
                 Console.Out.WriteLine("base material is null");

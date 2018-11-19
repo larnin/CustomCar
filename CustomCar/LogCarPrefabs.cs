@@ -455,7 +455,7 @@ namespace CustomCar
                     var state = animations[i];
                     var clip = state.clip;
                     s += "{\"name\":\"" + state.name + "\",\"clipName\":\"" + clip.name + "\",\"lenght\":" + clip.length + ",\"framerate\":" + clip.frameRate + ",\"speed\":" + state.speed
-                        + ",\"weight\":" + state.weight + "}";
+                        + ",\"weight\":" + state.weight + ",\"warpMode\":\"" + state.wrapMode.ToString() + "\",\"legacy\":\"" + (clip.legacy?"true":"false") + "\"}";
 
                     if (i < animations.Count - 1)
                         s += ",";
