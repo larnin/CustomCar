@@ -315,7 +315,7 @@ namespace CustomCar
             public string toJson()
             {
                 return "{\"carObject\":" + (carObject != null ? carObject.toJson() : "\"null\"") + ",\"screenObject\":" + (screenObject != null ? screenObject.toJson() : "\"null\"")
-                    + ",\"cutsceneSceenObject\":" + (cutsceneSceenObject == null ? cutsceneSceenObject.toJson() : "\"null\"")
+                    + ",\"cutsceneSceenObject\":" + (cutsceneSceenObject != null ? cutsceneSceenObject.toJson() : "\"null\"")
                     + ",\"carName\":\"" + carName + "\",\"carColor\":" + JsonUtility.ToJson(carColor) + "}";
             }
         }
@@ -445,22 +445,67 @@ namespace CustomCar
 
         class CustomInfoAnimation : CustomInfoBase
         {
-            public List<AnimationState> animations = new List<AnimationState>();
+            public Animation animation;
 
             public override string toJson()
             {
                 string s = "{\"clips\":[";
-                for(int i = 0; i < animations.Count; i++)
+
+                List<AnimationState> anims = new List<AnimationState>();
+                foreach (AnimationState state in animation)
+                    anims.Add(state);
+                for(int i = 0; i < anims.Count; i++)
                 {
-                    var state = animations[i];
+                    var state = anims[i];
                     var clip = state.clip;
                     s += "{\"name\":\"" + state.name + "\",\"clipName\":\"" + clip.name + "\",\"lenght\":" + clip.length + ",\"framerate\":" + clip.frameRate + ",\"speed\":" + state.speed
-                        + ",\"weight\":" + state.weight + ",\"warpMode\":\"" + state.wrapMode.ToString() + "\",\"legacy\":\"" + (clip.legacy?"true":"false") + "\"}";
+                        + ",\"weight\":" + state.weight + ",\"warpMode\":\"" + state.wrapMode.ToString() + "\",\"legacy\":\"" + (clip.legacy ? "true" : "false")
+                        + "\",\"blendMode\":\"" + state.blendMode.ToString() + "\",\"bounds\":" + JsonEx.toJson(clip.localBounds) + "\"Events\":{";
 
-                    if (i < animations.Count - 1)
+                    for(int j = 0; j < clip.events.Length; j++)
+                    {
+                        var e = clip.events[j];
+                        s += "{\"time\":" + e.time + "}";
+
+                        if (j < clip.events.Length - 1)
+                            s += ",";
+                    }
+                    s += "}}";
+
+
+
+                    if (i < anims.Count - 1)
                         s += ",";
                 }
-                return s + "]}";
+                s += "]";
+
+                if (animation.clip != null)
+                {
+                    var clip = animation.clip;
+                    s += ",\"clip\":{\"name\":\"" + clip.name + "\",\"lenght\":" + clip.length + ",\"framerate\":" + clip.frameRate
+                        + ",\"weight\":" + ",\"legacy\":\"" + (clip.legacy ? "true" : "false")
+                        + "\",\"bounds\":" + JsonEx.toJson(clip.localBounds) + "\"Events\":{";
+
+                    for (int j = 0; j < clip.events.Length; j++)
+                    {
+                        var e = clip.events[j];
+                        s += "{\"time\":" + e.time + "}";
+
+                        if (j < clip.events.Length - 1)
+                            s += ",";
+                    }
+                    s += "}}";
+                }
+                s += ",\"animateOnlyIfVisible\":\"" + (animation.animateOnlyIfVisible ? "true" : "false") + "\"";
+                s += ",\"animatePhysic\":\"" + (animation.animatePhysics ? "true" : "false") + "\"";
+                s += ",\"cullingType\":\"" + animation.cullingType.ToString() + "\"";
+                s += ",\"playing\":\"" + (animation.isPlaying ? "true" : "false") + "\"";
+                s += ",\"clipCount\":" + animation.GetClipCount();
+                s += ",\"bounds\":" + JsonEx.toJson(animation.localBounds);
+                s += ",\"playAuto\":\"" + (animation.playAutomatically ? "true" : "false") + "\"";
+                s += ",\"warpmode\":\"" + animation.wrapMode.ToString() + "\"";
+
+                return s + "}";
             }
         }
 
@@ -674,8 +719,7 @@ namespace CustomCar
         static CustomInfoAnimation getAnimationInfos(Animation a)
         {
             CustomInfoAnimation data = new CustomInfoAnimation();
-            foreach (AnimationState state in a)
-                data.animations.Add(state);
+            data.animation = a;
             return data;
         }
 

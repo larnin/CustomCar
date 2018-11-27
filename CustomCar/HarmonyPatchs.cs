@@ -1,6 +1,7 @@
 ﻿using Harmony;
 using System;
 using System.Reflection;
+using UnityEngine;
 
 namespace CustomCar
 {
@@ -36,6 +37,63 @@ namespace CustomCar
 
             var field = __instance.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic);
             field.SetValue(__instance, carColors);
+        }
+    }
+
+    //change additive to blend animation blendMode
+    [HarmonyPatch(typeof(GadgetWithAnimation), "SetAnimationStateValues")]
+    internal class GadgetWithAnimationSetAnimationStateValues
+    {
+        static bool Prefix(GadgetWithAnimation __instance)
+        {
+            var comp = __instance.GetComponentInChildren<Animation>();
+            if(comp)
+            {
+                if (!ChangeBlendModeToBlend(comp.transform, __instance.animationName_))
+                    return true;
+
+                var state = comp[__instance.animationName_];
+                if(state)
+                {
+                    state.layer = 3;
+                    state.blendMode = AnimationBlendMode.Blend;
+                    state.wrapMode = WrapMode.ClampForever;
+                    state.enabled = true;
+                    state.weight = 1f;
+                    state.speed = 0f;
+                }
+            }
+
+            return false;
+        }
+
+        static bool ChangeBlendModeToBlend(Transform obj, string animationName)
+        {
+            for(int i = 0; i < obj.childCount; i++)
+            {
+                var n = obj.GetChild(i).gameObject.name.ToLower();
+                if (!n.StartsWith("#"))
+                    continue;
+
+                n = n.Remove(0, 1);
+                var parts = n.Split(';');
+
+                if(parts.Length == 1)
+                {
+                    if (parts[0] == "additive")
+                        return false;
+                    if (parts[0] == "blend")
+                        return true;
+                }
+                if(parts[1] == animationName.ToLower())
+                {
+                    if (parts[0] == "additive")
+                        return false;
+                    if (parts[0] == "blend")
+                        return true;
+                }
+            }
+            return false;
         }
     }
 }
