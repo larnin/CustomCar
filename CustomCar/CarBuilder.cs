@@ -56,6 +56,7 @@ namespace CustomCar
             GameObject boostJet = null;
             GameObject wingJet = null;
             GameObject rotationJet = null;
+            GameObject wingTrail = null;
             foreach (var j in refractor.GetComponentsInChildren<JetFlame>())
             {
                 var name = j.gameObject.name;
@@ -66,6 +67,7 @@ namespace CustomCar
                 else if (name == "WingJetFlameLeft1")
                     wingJet = j.gameObject;
             }
+            wingTrail = refractor.GetComponentInChildren<WingTrail>().gameObject;
 
             Material baseMat = null;
             foreach(var o in obj.GetComponentsInChildren<MeshRenderer>())
@@ -94,7 +96,7 @@ namespace CustomCar
             var wingJets = new List<JetFlame>();
             var rotationJets = new List<JetFlame>();
             
-            PlaceJets(newcar, boostJet, wingJet, rotationJet, boostJets, wingJets, rotationJets);
+            PlaceJets(newcar, boostJet, wingJet, rotationJet, boostJets, wingJets, rotationJets, wingTrail);
 
             var carVisual = obj.GetComponent<CarVisuals>();
             carVisual.rotationJetFlames_ = rotationJets.ToArray();
@@ -179,7 +181,7 @@ namespace CustomCar
         }
 
         void PlaceJets(GameObject obj, GameObject boostJet, GameObject wingJet, GameObject rotationJet
-            , List<JetFlame> boostJets, List<JetFlame> wingJets, List<JetFlame> rotationJets)
+            , List<JetFlame> boostJets, List<JetFlame> wingJets, List<JetFlame> rotationJets, GameObject wingtrail)
         {
             int childNb = obj.transform.childCount;
             for (int i = 0; i < childNb; i++)
@@ -207,7 +209,13 @@ namespace CustomCar
                     jet.transform.localRotation = Quaternion.identity;
                     rotationJets.Add(jet.GetComponentInChildren<JetFlame>());
                 }
-                else PlaceJets(child, boostJet, wingJet, rotationJet, boostJets, wingJets, rotationJets);
+                else if(wingtrail != null && name.Contains("wingtrail"))
+                {
+                    var trail = GameObject.Instantiate(wingtrail, child.transform);
+                    trail.transform.localPosition = Vector3.zero;
+                    trail.transform.localRotation = Quaternion.identity;
+                }
+                else PlaceJets(child, boostJet, wingJet, rotationJet, boostJets, wingJets, rotationJets, wingtrail);
             }
         }
 

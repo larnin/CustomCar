@@ -332,14 +332,18 @@ namespace CustomCar
                 string s = "{\"name\":\"" + name + "\",\"active\":\"" + active + "\",\"childs\":[";
                 for (int i = 0; i < childs.Count; i++)
                 {
-                    s += childs[i].toJson();
+                    if (childs[i] == null)
+                        s += "{}";
+                    else s += childs[i].toJson();
                     if (i < childs.Count - 1)
                         s += ",";
                 }
                 s += "],\"components\":[";
                 for (int i = 0; i < components.Count; i++)
                 {
-                    s += components[i].toJson();
+                    if (components[i] == null)
+                        s += "{}";
+                    else s += components[i].toJson();
                     if (i < components.Count - 1)
                         s += ",";
                 }
@@ -680,6 +684,8 @@ namespace CustomCar
 
         static ComponentInfo getComponentInfos(Component comp)
         {
+            if (comp == null)
+                return null;
             ComponentInfo data = new ComponentInfo();
 
             data.customInfos = getCustomInfos(comp);
