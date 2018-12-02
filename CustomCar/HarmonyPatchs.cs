@@ -1,6 +1,9 @@
 ﻿using Harmony;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using UnityEngine;
 
 namespace CustomCar
@@ -39,6 +42,52 @@ namespace CustomCar
             field.SetValue(__instance, carColors);
         }
     }
+
+    [HarmonyPatch(typeof(Profile), "SetColorsForAllCars")]
+    internal class ProfileSetColorsForAllCars
+    {
+        static bool Prefix(Profile __instance, CarColors cc)
+        {
+            var carColors = new CarColors[G.Sys.ProfileManager_.carInfos_.Length];
+            for (int i = 0; i < carColors.Length; i++)
+                carColors[i] = cc;
+
+            var field = __instance.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic);
+            field.SetValue(__instance, carColors);
+
+            field = __instance.GetType().GetField("dataModified_", BindingFlags.Instance | BindingFlags.NonPublic);
+            field.SetValue(__instance, true);
+
+            return false;
+        }
+    }
+
+    //trying to fix colors loading - it look like that does nothing
+    //[HarmonyPatch(typeof(Profile), "Visit")]
+    //[HarmonyPatch("CheckForErrors")]
+    //internal class ProfileVisit
+    //{
+    //    static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+    //    {
+    //        var codes = new List<CodeInstruction>(instructions);
+
+    //        for(int i = 0; i < codes.Count; i++)
+    //        {
+    //            if(codes[i].opcode == OpCodes.Blt) //on the for
+    //            {
+    //                int index = i - 1;
+    //                codes.RemoveAt(index);
+    //                codes.Insert(index, new CodeInstruction(OpCodes.Ldarg_0));
+    //                codes.Insert(index + 1, new CodeInstruction(OpCodes.Ldfld, typeof(Profile).GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic)));
+    //                codes.Insert(index + 2, new CodeInstruction(OpCodes.Ldlen));
+    //                codes.Insert(index + 3, new CodeInstruction(OpCodes.Conv_I4));
+    //                break;
+    //            }
+    //        }
+
+    //        return codes.AsEnumerable();
+    //    }
+    //}
 
     //change additive to blend animation blendMode
     [HarmonyPatch(typeof(GadgetWithAnimation), "SetAnimationStateValues")]

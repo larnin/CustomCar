@@ -201,6 +201,7 @@ namespace CustomCar
                     jet.transform.localPosition = Vector3.zero;
                     jet.transform.localRotation = Quaternion.identity;
                     wingJets.Add(jet.GetComponentInChildren<JetFlame>());
+                    wingJets.Last().rotationAxis_ = JetDirection(child.transform);
                 }
                 else if (rotationJet != null && name.Contains("rotationjet"))
                 {
@@ -208,6 +209,7 @@ namespace CustomCar
                     jet.transform.localPosition = Vector3.zero;
                     jet.transform.localRotation = Quaternion.identity;
                     rotationJets.Add(jet.GetComponentInChildren<JetFlame>());
+                    rotationJets.Last().rotationAxis_ = JetDirection(child.transform);
                 }
                 else if(wingtrail != null && name.Contains("wingtrail"))
                 {
@@ -319,6 +321,37 @@ namespace CustomCar
                 else if (s[0] == "sparkle")
                     m_data.defaultColors.sparkle_ = c;
             }
+        }
+
+        Vector3 JetDirection(Transform t)
+        {
+            int nb = t.childCount;
+            for(int i = 0; i < nb; i++)
+            {
+                var n = t.GetChild(i).gameObject.name.ToLower();
+                if (!n.StartsWith("#"))
+                    continue;
+                n = n.Remove(0, 1);
+                if (n.Contains("front"))
+                    return new Vector3(-1, 0, 0);
+                if (n.Contains("back"))
+                    return new Vector3(1, 0, 0);
+                if (n.Contains("left"))
+                    return new Vector3(0, 1, -1);
+                if (n.Contains("right"))
+                    return new Vector3(0, -1, 1);
+                var s = n.Split(';');
+                if (s.Length != 4)
+                    continue;
+                if (!s[0].Contains("dir"))
+                    continue;
+                var v = Vector3.zero;
+                float.TryParse(s[1], out v.x);
+                float.TryParse(s[2], out v.y);
+                float.TryParse(s[3], out v.z);
+                return v;
+            }
+            return Vector3.zero;
         }
 
         ColorChanger.ColorType colorType(string name)

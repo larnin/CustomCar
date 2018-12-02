@@ -541,6 +541,16 @@ namespace CustomCar
             }
         }
 
+        class CustomInfoJetFlame : CustomInfoBase
+        {
+            public Vector3 rotationAxis;
+
+            public override string toJson()
+            {
+                return "{\"rotationAxis\":[" + rotationAxis.x + "," + rotationAxis.y + "," + rotationAxis.z + "]}";
+            }
+        }
+
         class MaterialInfo
         {
             public string materialName;
@@ -709,6 +719,8 @@ namespace CustomCar
                 return getAnimationInfos(comp as Animation);
             else if (comp is ColorChanger)
                 return getColorChangerInfos(comp as ColorChanger);
+            else if (comp is JetFlame)
+                return getJetFlameInfos(comp as JetFlame);
 
             return null;
         }
@@ -790,6 +802,13 @@ namespace CustomCar
         {
             CustomInfoColorChanger data = new CustomInfoColorChanger();
             data.rendererChangers = c.rendererChangers_;
+            return data;
+        }
+
+        static CustomInfoJetFlame getJetFlameInfos(JetFlame f)
+        {
+            CustomInfoJetFlame data = new CustomInfoJetFlame();
+            data.rotationAxis = f.rotationAxis_;
             return data;
         }
 
