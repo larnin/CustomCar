@@ -41,12 +41,37 @@ namespace CustomCar
 
         public void Initialize(IManager manager, string ipcIdentifier)
         {
+            try
+            {
+                var harmony = HarmonyInstance.Create("com.Larnin.CustomCar");
+                harmony.PatchAll(Assembly.GetExecutingAssembly());
+            }
+            catch(Exception e)
+            {
+                Console.Out.WriteLine(e.ToString());
+            }
 
-            var harmony = HarmonyInstance.Create("com.Larnin.CustomCar");
-            harmony.PatchAll(Assembly.GetExecutingAssembly());
+            try
+            {
+                CarInfos carInfos = new CarInfos();
+                carInfos.collectInfos();
+                CarBuilder2 builder = new CarBuilder2();
+                builder.createCars(carInfos);
+            }
+            catch(Exception e)
+            {
+                ErrorList.add("An error occured while trying to load cars assets");
+                Console.Out.WriteLine(e.ToString());
+            }
 
             LoadCars();
             LogCarPrefabs.logCars();
+
+            Events.MainMenu.Initialized.Subscribe(data =>
+            {
+                if (ErrorList.haveErrors())
+                    ErrorList.show();
+            });
         }
 
         void LoadCars()

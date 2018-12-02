@@ -47,8 +47,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CarBuilder.cs" />
+    <Compile Include="CarBuilder2.cs" />
+    <Compile Include="CarInfos.cs" />
     <Compile Include="CopyComponent.cs" />
     <Compile Include="Entry.cs" />
+    <Compile Include="ErrorList.cs" />
+    <Compile Include="GameObjectEx.cs" />
     <Compile Include="HarmonyPatchs.cs" />
     <Compile Include="LogCarPrefabs.cs" />
     <Compile Include="ObjExporter.cs" />
