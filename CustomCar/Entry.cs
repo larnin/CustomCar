@@ -13,28 +13,6 @@ using Spectrum.API.Experimental;
 
 namespace CustomCar
 {
-    public class Configs
-    {
-        public string carName;
-        public Configs()
-        {
-            var settings = new Settings("CustomCar");
-
-            var entries = new Dictionary<string, string>
-            {
-                {"CarName", "Random" },
-            };
-
-            foreach (var s in entries)
-                if (!settings.ContainsKey(s.Key))
-                    settings.Add(s.Key, s.Value);
-
-            settings.Save();
-
-            carName = (string)settings["CarName"];
-        }
-    }
-
     public class Entry : IPlugin, IUpdatable
     {
         List<Assets> assets = new List<Assets>();
@@ -51,6 +29,8 @@ namespace CustomCar
                 Console.Out.WriteLine(e.ToString());
             }
 
+            LogCarPrefabs.logCars();
+
             try
             {
                 CarInfos carInfos = new CarInfos();
@@ -64,8 +44,7 @@ namespace CustomCar
                 Console.Out.WriteLine(e.ToString());
             }
 
-            LoadCars();
-            LogCarPrefabs.logCars();
+            //LoadCars();
 
             Events.MainMenu.Initialized.Subscribe(data =>
             {

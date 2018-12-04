@@ -110,12 +110,12 @@ namespace CustomCar
         {
             List<MaterialPropertyInfo> materialsNames = new List<MaterialPropertyInfo>
             {
-                new MaterialPropertyInfo("Custom/LaserCut/CarPaint", "CarPaint", 5, -1, -1),
-                new MaterialPropertyInfo("Custom/LaserCut/CarWindow", "CarWindow", -1, 218, 219),
-                new MaterialPropertyInfo("Custom/Reflective/Bump Glow LaserCut", "Wheel", 5, 218, 255),
-                new MaterialPropertyInfo("Custom/LaserCut/CarPaintBump", "CarPaintBump", 5, 218, -1),
-                new MaterialPropertyInfo("Custom/Reflective/Bump Glow Interceptor Special", "Interceptor", 5, 218, 255),
-                new MaterialPropertyInfo("Custom/LaserCut/CarWindowTrans2Sided", "TransparentGlow", -1, 218, 219)
+                new MaterialPropertyInfo("Custom/LaserCut/CarPaint", "carpaint", 5, -1, -1),
+                new MaterialPropertyInfo("Custom/LaserCut/CarWindow", "carwindow", -1, 218, 219),
+                new MaterialPropertyInfo("Custom/Reflective/Bump Glow LaserCut", "wheel", 5, 218, 255),
+                new MaterialPropertyInfo("Custom/LaserCut/CarPaintBump", "carpaintbump", 5, 218, -1),
+                new MaterialPropertyInfo("Custom/Reflective/Bump Glow Interceptor Special", "interceptor", 5, 218, 255),
+                new MaterialPropertyInfo("Custom/LaserCut/CarWindowTrans2Sided", "transparentglow", -1, 218, 219)
             };
 
             foreach(var c in G.Sys.ProfileManager_.carInfos_)
@@ -144,6 +144,8 @@ namespace CustomCar
                 if (!materials.ContainsKey(mat.name))
                     ErrorList.add("Can't find the material: " + mat.name + " - shader: " + mat.shaderName);
             }
+
+            materials.Add("donotreplace", new MaterialInfos());
         }
     }
 }

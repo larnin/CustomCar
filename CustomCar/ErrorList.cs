@@ -34,13 +34,10 @@ namespace CustomCar
         {
             if (errors.Count == 0)
                 return;
-
-            const int maxError = 5;
-            string error = "Can't load the cars correctly:\n";
-            for(int i = 0; i < errors.Count && i < maxError; i++)
+            
+            string error = "Can't load the cars correctly:" + errors.Count + " error(s)\n";
+            for(int i = 0; i < errors.Count; i++)
                 error += errors[i] + "\n";
-            if (errors.Count > maxError)
-                error += "And " + (errors.Count - maxError) + " more ...";
 
             G.Sys.MenuPanelManager_.ShowError(error, "Custom cars error");
         }
