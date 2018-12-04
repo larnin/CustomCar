@@ -1,257 +1,396 @@
-﻿using System;
+﻿using Spectrum.API;
+using Spectrum.API.Experimental;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using UnityEngine;
 
 namespace CustomCar
 {
-    public class CarData
-    {
-        public string name;
-        public GameObject carToAdd;
-        public CarColors defaultColors;
-    }
-
     public class CarBuilder
     {
-        CarData m_data;
-
-        public GameObject CreateCar(CarData data, GameObject model)
+        class CreateCarReturnInfos
         {
-            m_data = data;
-
-            var obj = CreateBaseCar(model);
-            ReplaceModel(obj);
-
-            return obj;
+            public GameObject car;
+            public CarColors colors;
         }
 
-        GameObject CreateBaseCar(GameObject model)
+        CarInfos m_infos;
+
+        public void createCars(CarInfos infos)
         {
-            var obj = GameObject.Instantiate(model);
+            m_infos = infos;
+            var cars = loadAssetsBundle();
+
+            List<CreateCarReturnInfos> carsInfos = new List<CreateCarReturnInfos>();
+
+            foreach (var car in cars)
+            {
+                carsInfos.Add(createCar(car));
+            }
+
+            var profileManager = G.Sys.ProfileManager_;
+            var oldCars = profileManager.carInfos_.ToArray();
+            profileManager.carInfos_ = new CarInfo[oldCars.Length + cars.Count];
+
+            var unlocked = (Dictionary<string, int>)profileManager.GetType().GetField("unlockedCars_", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(profileManager);
+
+            for (int i = 0; i < profileManager.carInfos_.Length; i++)
+            {
+                if (i < oldCars.Length)
+                {
+                    profileManager.carInfos_[i] = oldCars[i];
+                    continue;
+                }
+
+                int index = i - oldCars.Length;
+
+                var car = new CarInfo();
+                car.name_ = carsInfos[index].car.name;
+                car.prefabs_ = new CarPrefabs();
+                car.prefabs_.carPrefab_ = carsInfos[index].car;
+                car.colors_ = carsInfos[index].colors;
+                profileManager.carInfos_[i] = car;
+                unlocked.Add(car.name_, i);
+            }
+
+            var carColors = new CarColors[oldCars.Length + cars.Count];
+            for (int i = 0; i < carColors.Length; i++)
+                carColors[i] = G.Sys.ProfileManager_.carInfos_[i].colors_;
+
+            for (int i = 0; i < profileManager.ProfileCount_; i++)
+            {
+                Profile p = profileManager.GetProfile(i);
+
+                var field = p.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic);
+                field.SetValue(p, carColors);
+            }
+        }
+
+        List<GameObject> loadAssetsBundle()
+        {
+            var dirStr = Path.Combine(Path.GetDirectoryName(Assembly.GetCallingAssembly().Location), Defaults.PrivateAssetsDirectory);
+            var files = Directory.GetFiles(dirStr);
+
+            List<GameObject> cars = new List<GameObject>();
+
+            foreach (var f in files)
+            {
+                var index = f.LastIndexOf('/');
+                if (index < 0)
+                    index = f.LastIndexOf('\\');
+                var name = f.Substring(index + 1);
+                var asset = new Assets(name);
+
+                GameObject car = null;
+                foreach (var n in asset.Bundle.GetAllAssetNames())
+                {
+                    if (car == null && n.EndsWith(".prefab"))
+                    {
+                        car = asset.Bundle.LoadAsset<GameObject>(n);
+                        break;
+                    }
+                }
+
+                if (car == null)
+                    ErrorList.add("Can't find a prefab in the asset bundle " + f);
+                else
+                {
+                    car.name = name;
+                    cars.Add(car);
+                }
+            }
+
+            return cars;
+        }
+
+        CreateCarReturnInfos createCar(GameObject car)
+        {
+            var infos = new CreateCarReturnInfos();
+
+            var obj = GameObject.Instantiate(m_infos.baseCar);
+            obj.name = car.name;
             GameObject.DontDestroyOnLoad(obj);
             obj.SetActive(false);
-            obj.name = m_data.name;
-            return obj;
+
+            removeOldCar(obj);
+            var newCar = addNewCarOnPrefab(obj, car);
+            setCarDatas(obj, newCar);
+            infos.car = obj;
+
+            infos.colors = loadDefaultColors(newCar);
+
+            return infos;
         }
 
-        void ReplaceModel(GameObject obj)
+        void removeOldCar(GameObject obj)
         {
             List<GameObject> wheelsToRemove = new List<GameObject>();
-            for(int i = 0; i < obj.transform.childCount; i++)
+            for (int i = 0; i < obj.transform.childCount; i++)
             {
                 var c = obj.transform.GetChild(i).gameObject;
                 if (c.name.ToLower().Contains("wheel"))
                     wheelsToRemove.Add(c);
             }
+            if (wheelsToRemove.Count != 4)
+                ErrorList.add("Found " + wheelsToRemove.Count + " wheels on base prefabs, expected 4");
 
             var refractor = obj.transform.Find("Refractor");
-            if(refractor == null)
+            if (refractor == null)
             {
-                Console.Out.WriteLine("Can't remove refractor object");
+                ErrorList.add("Can't find the Refractor object on the base car prefab");
                 return;
             }
-
-            GameObject boostJet = null;
-            GameObject wingJet = null;
-            GameObject rotationJet = null;
-            GameObject wingTrail = null;
-            foreach (var j in refractor.GetComponentsInChildren<JetFlame>())
-            {
-                var name = j.gameObject.name;
-                if (name == "BoostJetFlameCenter")
-                    boostJet = j.gameObject;
-                else if (name == "JetFlameBackLeft")
-                    rotationJet = j.gameObject;
-                else if (name == "WingJetFlameLeft1")
-                    wingJet = j.gameObject;
-            }
-            wingTrail = refractor.GetComponentInChildren<WingTrail>().gameObject;
-
-            Material baseMat = null;
-            foreach(var o in obj.GetComponentsInChildren<MeshRenderer>())
-            {
-                var mat = o.material;
-                if(mat.shader.name == "Custom/Reflective/Bump Glow LaserCut")
-                {
-                    baseMat = mat;
-                    break;
-                }
-            }
-
-            var colorChanger = obj.GetComponent<ColorChanger>();
-            if (colorChanger != null)
-                colorChanger.rendererChangers_ = new ColorChanger.RendererChanger[0];
-
-            var newcar = GameObject.Instantiate(m_data.carToAdd, obj.transform);
-            foreach (var r in newcar.GetComponentsInChildren<Renderer>())
-            {
-                ReplaceMaterials(r, baseMat);
-                if(colorChanger != null)
-                    AddMaterialColorChanger(colorChanger, r.transform);
-            }
-
-            var boostJets = new List<JetFlame>();
-            var wingJets = new List<JetFlame>();
-            var rotationJets = new List<JetFlame>();
-            
-            PlaceJets(newcar, boostJet, wingJet, rotationJet, boostJets, wingJets, rotationJets, wingTrail);
-
-            var carVisual = obj.GetComponent<CarVisuals>();
-            carVisual.rotationJetFlames_ = rotationJets.ToArray();
-            carVisual.boostJetFlames_ = boostJets.ToArray();
-            carVisual.wingJetFlames_ = wingJets.ToArray();
-            carVisual.lights_ = new Light[0];
-            carVisual.driverPosition_ = null;
-            carVisual.carBodyRenderer_ = newcar.GetComponentInChildren<SkinnedMeshRenderer>();
-
-            MakeMeshSkinned(carVisual.carBodyRenderer_);
-
-            List<Transform> wheelsToMove = new List<Transform>();
-            for(int i = 0; i < newcar.transform.childCount; i++)
-            {
-                var c = newcar.transform.GetChild(i).gameObject;
-                var name = c.name.ToLower();
-                if (name.Contains("wheel"))
-                {
-                    wheelsToMove.Add(c.transform);
-                    var wheelRenderer = c.GetComponentInChildren<MeshRenderer>();
-                    CarWheelVisuals comp = c.AddComponent<CarWheelVisuals>();
-                    comp.tire_ = c.GetComponentInChildren<MeshRenderer>();
-                    if (carVisual != null)
-                    {
-                        if (name.Contains("front"))
-                        {
-                            if (name.Contains("left"))
-                                carVisual.wheelFL_ = comp;
-                            else if (name.Contains("right"))
-                                carVisual.wheelFR_ = comp;
-                        }
-                        else if (name.Contains("back"))
-                        {
-                            if (name.Contains("left"))
-                                carVisual.wheelBL_ = comp;
-                            else if (name.Contains("right"))
-                                carVisual.wheelBR_ = comp;
-                        }
-                    }
-                }
-
-                if (name.Contains("driverposition"))
-                    carVisual.driverPosition_ = c.transform;
-
-                if (name.Contains("defaultcolor"))
-                    loadDefaultColors(c.gameObject);
-            }
-
+            GameObject.Destroy(refractor.gameObject);
             foreach (var w in wheelsToRemove)
                 GameObject.Destroy(w);
-            
-            GameObject.Destroy(refractor.gameObject);
         }
 
-        void ReplaceMaterials(Renderer r, Material baseMat)
+        GameObject addNewCarOnPrefab(GameObject obj, GameObject car)
         {
-            for(int i = 0; i < r.transform.childCount; i++)
-            {
-                var n = r.transform.GetChild(i).gameObject.name.ToLower();
-                if (n.StartsWith("#") && n.Contains("donotreplace"))
-                    return;
-            }
+            return GameObject.Instantiate(car, obj.transform);
+        }
 
-            if (baseMat == null)
+        void setCarDatas(GameObject obj, GameObject car)
+        {
+            setColorChanger(obj.GetComponent<ColorChanger>(), car);
+            setCarVisuals(obj.GetComponent<CarVisuals>(), car);
+        }
+
+        void setColorChanger(ColorChanger colorChanger, GameObject car)
+        {
+            if(colorChanger == null)
             {
-                Console.Out.WriteLine("base material is null");
+                ErrorList.add("Can't find the ColorChanger component on the base car");
                 return;
             }
 
-            List<Material> newMaterials = new List<Material>();
-            foreach(var m in r.materials)
+            colorChanger.rendererChangers_ = new ColorChanger.RendererChanger[0];
+            foreach (var r in car.GetComponentsInChildren<Renderer>())
             {
-                Material mat = UnityEngine.Object.Instantiate(baseMat);
-
-                mat.SetTexture(5, m.GetTexture("_MainTex")); //diffuse
-                mat.SetTexture(255, m.GetTexture("_EmissionMap")); //emissive
-                mat.SetTexture(218, m.GetTexture("_BumpMap")); //normal
-                newMaterials.Add(mat);
-            }
-            
-            r.materials = newMaterials.ToArray();
-        }
-
-        void PlaceJets(GameObject obj, GameObject boostJet, GameObject wingJet, GameObject rotationJet
-            , List<JetFlame> boostJets, List<JetFlame> wingJets, List<JetFlame> rotationJets, GameObject wingtrail)
-        {
-            int childNb = obj.transform.childCount;
-            for (int i = 0; i < childNb; i++)
-            {
-                var child = obj.GetChild(i).gameObject;
-                var name = child.name.ToLower();
-                if (boostJet != null && name.Contains("boostjet"))
-                {
-                    var jet = GameObject.Instantiate(boostJet, child.transform);
-                    jet.transform.localPosition = Vector3.zero;
-                    jet.transform.localRotation = Quaternion.identity;
-                    boostJets.Add(jet.GetComponentInChildren<JetFlame>());
-                }
-                else if (wingJet != null && name.Contains("wingjet"))
-                {
-                    var jet = GameObject.Instantiate(wingJet, child.transform);
-                    jet.transform.localPosition = Vector3.zero;
-                    jet.transform.localRotation = Quaternion.identity;
-                    wingJets.Add(jet.GetComponentInChildren<JetFlame>());
-                    wingJets.Last().rotationAxis_ = JetDirection(child.transform);
-                }
-                else if (rotationJet != null && name.Contains("rotationjet"))
-                {
-                    var jet = GameObject.Instantiate(rotationJet, child.transform);
-                    jet.transform.localPosition = Vector3.zero;
-                    jet.transform.localRotation = Quaternion.identity;
-                    rotationJets.Add(jet.GetComponentInChildren<JetFlame>());
-                    rotationJets.Last().rotationAxis_ = JetDirection(child.transform);
-                }
-                else if(wingtrail != null && name.Contains("wingtrail"))
-                {
-                    var trail = GameObject.Instantiate(wingtrail, child.transform);
-                    trail.transform.localPosition = Vector3.zero;
-                    trail.transform.localRotation = Quaternion.identity;
-                }
-                else PlaceJets(child, boostJet, wingJet, rotationJet, boostJets, wingJets, rotationJets, wingtrail);
+                replaceMaterials(r);
+                if (colorChanger != null)
+                    addMaterialColorChanger(colorChanger, r.transform);
             }
         }
 
-        void AddMaterialColorChanger(ColorChanger colorChanger, Transform obj)
+        class MaterialPropertyExport
         {
-            Renderer r = obj.GetComponent<Renderer>();
+            public enum PropertyType
+            {
+                Color,
+                ColorArray,
+                Float,
+                FloatArray,
+                Int,
+                Matrix,
+                MatrixArray,
+                Texture,
+                Vector,
+                VectorArray,
+            }
+
+            public string fromName;
+            public string toName;
+            public int fromID = -1;
+            public int toID = -1;
+            public PropertyType type;
+        }
+
+        void replaceMaterials(Renderer r)
+        {
+            string[] matNames = new string[r.materials.Length];
+            for (int i = 0; i < matNames.Length; i++)
+                matNames[i] = "wheel";
+            List<MaterialPropertyExport>[] matProperties = new List<MaterialPropertyExport>[r.materials.Length];
+            for (int i = 0; i < matProperties.Length; i++)
+                matProperties[i] = new List<MaterialPropertyExport>();
+
+            fillMaterialInfos(r, matNames, matProperties);
+
+            var materials = r.materials.ToArray();
+            for(int i = 0; i < r.materials.Length; i++)
+            {
+                MaterialInfos matInfo = null;
+                if(!m_infos.materials.TryGetValue(matNames[i], out matInfo))
+                {
+                    ErrorList.add("Can't find the material " + matNames[i] + " on " + r.gameObject.FullName());
+                    continue;
+                }
+                if (matInfo == null || matInfo.material == null)
+                    continue;
+                Material mat = UnityEngine.Object.Instantiate(matInfo.material);
+                if (matInfo.diffuseIndex >= 0)
+                    mat.SetTexture(matInfo.diffuseIndex, r.materials[i].GetTexture("_MainTex"));
+                if (matInfo.normalIndex >= 0)
+                    mat.SetTexture(matInfo.normalIndex, r.materials[i].GetTexture("_BumpMap"));
+                if (matInfo.emitIndex >= 0)
+                    mat.SetTexture(matInfo.emitIndex, r.materials[i].GetTexture("_EmissionMap"));
+
+                foreach (var p in matProperties[i])
+                    copyMaterialProperty(r.materials[i], mat, p);
+
+                materials[i] = mat;
+            }
+            r.materials = materials;
+        }
+
+        void fillMaterialInfos(Renderer r, string[] matNames, List<MaterialPropertyExport>[] matProperties)
+        {
+            int childCount = r.transform.childCount;
+
+            for (int i = 0; i < childCount; i++)
+            {
+                var name = r.transform.GetChild(i).name.ToLower();
+                if (!name.StartsWith("#"))
+                    continue;
+                name = name.Remove(0, 1);
+                var s = name.Split(';');
+                if (s.Length == 0)
+                    continue;
+                if (s[0].Contains("mat"))
+                {
+                    if (s.Length != 3)
+                    {
+                        ErrorList.add(s[0] + " property on " + r.gameObject.FullName() + " must have 2 arguments");
+                        continue;
+                    }
+                    int index = 0;
+                    if (!int.TryParse(s[1], out index))
+                    {
+                        ErrorList.add("First argument of " + s[0] + " on " + r.gameObject.FullName() + " property must be a number");
+                        continue;
+                    }
+                    if (index < matNames.Length)
+                        matNames[index] = s[2];
+                }
+                else if (s[0].Contains("export"))
+                {
+                    if (s.Length != 5)
+                    {
+                        ErrorList.add(s[0] + " property on " + r.gameObject.FullName() + " must have 4 arguments");
+                        continue;
+                    }
+                    int index = 0;
+                    if (!int.TryParse(s[1], out index))
+                    {
+                        ErrorList.add("First argument of " + s[0] + " on " + r.gameObject.FullName() + " property must be a number");
+                        continue;
+                    }
+                    if (index >= matNames.Length)
+                        continue;
+                    MaterialPropertyExport p = new MaterialPropertyExport();
+                    bool found = false;
+
+                    foreach (MaterialPropertyExport.PropertyType pType in Enum.GetValues(typeof(MaterialPropertyExport.PropertyType)))
+                    {
+                        if (s[2] == pType.ToString().ToLower())
+                        {
+                            found = true;
+                            p.type = pType;
+                            break;
+                        }
+                    }
+                    if (!found)
+                    {
+                        ErrorList.add("The property " + s[2] + " on " + r.gameObject.FullName() + " is not valid");
+                        continue;
+                    }
+                    if (!int.TryParse(s[3], out p.fromID))
+                        p.fromName = s[3];
+                    if (!int.TryParse(s[4], out p.toID))
+                        p.toName = s[4];
+
+                    matProperties[index].Add(p);
+                }
+            }
+        }
+        
+        void copyMaterialProperty(Material from, Material to, MaterialPropertyExport property)
+        {
+            int fromID = property.fromID;
+            if (fromID == -1)
+                fromID = Shader.PropertyToID(property.fromName);
+            int toID = property.toID;
+            if (toID == -1)
+                toID = Shader.PropertyToID(property.toName);
+
+            switch(property.type)
+            {
+                case MaterialPropertyExport.PropertyType.Color:
+                    to.SetColor(toID, from.GetColor(fromID));
+                    break;
+                case MaterialPropertyExport.PropertyType.ColorArray:
+                    to.SetColorArray(toID, from.GetColorArray(fromID));
+                    break;
+                case MaterialPropertyExport.PropertyType.Float:
+                    to.SetFloat(toID, from.GetFloat(fromID));
+                    break;
+                case MaterialPropertyExport.PropertyType.FloatArray:
+                    to.SetFloatArray(toID, from.GetFloatArray(fromID));
+                    break;
+                case MaterialPropertyExport.PropertyType.Int:
+                    to.SetInt(toID, from.GetInt(fromID));
+                    break;
+                case MaterialPropertyExport.PropertyType.Matrix:
+                    to.SetMatrix(toID, from.GetMatrix(fromID));
+                    break;
+                case MaterialPropertyExport.PropertyType.MatrixArray:
+                    to.SetMatrixArray(toID, from.GetMatrixArray(fromID));
+                    break;
+                case MaterialPropertyExport.PropertyType.Texture:
+                    to.SetTexture(toID, from.GetTexture(fromID));
+                    break;
+                case MaterialPropertyExport.PropertyType.Vector:
+                    to.SetVector(toID, from.GetVector(fromID));
+                    break;
+                case MaterialPropertyExport.PropertyType.VectorArray:
+                    to.SetVectorArray(toID, from.GetVectorArray(fromID));
+                    break;
+            }
+        }
+
+        void addMaterialColorChanger(ColorChanger colorChanger, Transform t)
+        {
+            Renderer r = t.GetComponent<Renderer>();
             if (r == null)
                 return;
 
             var uniformChangers = new List<ColorChanger.UniformChanger>();
 
-            for(int i = 0; i < obj.childCount; i++)
+            for (int i = 0; i < t.childCount; i++)
             {
-                var o = obj.GetChild(i).gameObject;
-                var name = o.name;
+                var o = t.GetChild(i).gameObject;
+                var name = o.name.ToLower();
                 if (!name.StartsWith("#"))
                     continue;
 
                 name = name.Remove(0, 1); //remove #
 
                 var s = name.Split(';');
-                if (s.Length != 5)
+                if (s.Length == 0)
                     continue;
+                if (!s[0].Contains("color"))
+                    continue;
+                if (s.Length != 6)
+                {
+                    ErrorList.add(s[0] + " property on " + t.gameObject.FullName() + " must have 5 arguments");
+                    continue;
+                }
 
                 var uniformChanger = new ColorChanger.UniformChanger();
-                uniformChanger.colorType_ = colorType(s[0]);
                 int materialIndex = 0;
                 int.TryParse(s[1], out materialIndex);
                 uniformChanger.materialIndex_ = materialIndex;
-                uniformChanger.name_ = uniformName(s[2]);
+                uniformChanger.colorType_ = colorType(s[2]);
+                uniformChanger.name_ = uniformName(s[3]);
                 float multiplier = 0;
-                float.TryParse(s[3], out multiplier);
+                float.TryParse(s[4], out multiplier);
                 uniformChanger.mul_ = multiplier;
-                uniformChanger.alpha_ = s[4].ToLower() == "true";
+                uniformChanger.alpha_ = s[5].ToLower() == "true";
 
                 uniformChangers.Add(uniformChanger);
             }
@@ -266,92 +405,6 @@ namespace CustomCar
             var renders = colorChanger.rendererChangers_.ToList();
             renders.Add(renderChanger);
             colorChanger.rendererChangers_ = renders.ToArray();
-        }
-
-        void MakeMeshSkinned(SkinnedMeshRenderer renderer)
-        {
-            var mesh = renderer.sharedMesh;
-            if (mesh == null)
-            {
-                Console.Out.WriteLine("The mesh on " + renderer.name + " (SkinnedMeshRenderer) is null");
-                return;
-            }
-            if (!mesh.isReadable)
-            {
-                Console.Out.WriteLine("Can't read the car mesh " + mesh.name + "\nYou must allow read on it's unity inspector !");
-                return;
-            }
-            if (mesh.vertices.Length == mesh.boneWeights.Length)
-                return;
-
-            var bones = new BoneWeight[mesh.vertices.Length];
-            for (int i = 0; i < bones.Length; i++)
-                bones[i].weight0 = 1;
-            mesh.boneWeights = bones;
-            var t = renderer.transform;
-            var bindPoses = new Matrix4x4[1] { t.worldToLocalMatrix * renderer.transform.localToWorldMatrix };
-            mesh.bindposes = bindPoses;
-            renderer.bones = new Transform[1] { t };
-        }
-
-        void loadDefaultColors(GameObject obj)
-        {
-            for (int i = 0; i < obj.transform.childCount; i++)
-            {
-                var o = obj.transform.GetChild(i).gameObject;
-                var name = o.name.ToLower();
-
-                if (!name.StartsWith("#"))
-                    continue;
-
-                name = name.Remove(0, 1); //remove #
-
-                var s = name.Split(';');
-                if (s.Length != 2)
-                    continue;
-
-                Color c = ColorEx.HexToColor(s[1]);
-                c.a = 1;
-                if (s[0] == "primary")
-                    m_data.defaultColors.primary_ = c;
-                else if (s[0] == "secondary")
-                    m_data.defaultColors.secondary_ = c;
-                else if (s[0] == "glow")
-                    m_data.defaultColors.glow_ = c;
-                else if (s[0] == "sparkle")
-                    m_data.defaultColors.sparkle_ = c;
-            }
-        }
-
-        Vector3 JetDirection(Transform t)
-        {
-            int nb = t.childCount;
-            for(int i = 0; i < nb; i++)
-            {
-                var n = t.GetChild(i).gameObject.name.ToLower();
-                if (!n.StartsWith("#"))
-                    continue;
-                n = n.Remove(0, 1);
-                if (n.Contains("front"))
-                    return new Vector3(-1, 0, 0);
-                if (n.Contains("back"))
-                    return new Vector3(1, 0, 0);
-                if (n.Contains("left"))
-                    return new Vector3(0, 1, -1);
-                if (n.Contains("right"))
-                    return new Vector3(0, -1, 1);
-                var s = n.Split(';');
-                if (s.Length != 4)
-                    continue;
-                if (!s[0].Contains("dir"))
-                    continue;
-                var v = Vector3.zero;
-                float.TryParse(s[1], out v.x);
-                float.TryParse(s[2], out v.y);
-                float.TryParse(s[3], out v.z);
-                return v;
-            }
-            return Vector3.zero;
         }
 
         ColorChanger.ColorType colorType(string name)
@@ -382,6 +435,216 @@ namespace CustomCar
             else if (name == "speccolor")
                 return MaterialEx.SupportedUniform._SpecColor;
             return MaterialEx.SupportedUniform._Color;
+        }
+
+        void setCarVisuals(CarVisuals visuals, GameObject car)
+        {
+            if(visuals == null)
+            {
+                ErrorList.add("Can't find the CarVisuals component on the base car");
+                return;
+            }
+
+            var skinned = car.GetComponentInChildren<SkinnedMeshRenderer>();
+            MakeMeshSkinned(skinned);
+            visuals.carBodyRenderer_ = skinned;
+
+            var boostJets = new List<JetFlame>();
+            var wingJets = new List<JetFlame>();
+            var rotationJets = new List<JetFlame>();
+
+            PlaceJets(car, boostJets, wingJets, rotationJets);
+            visuals.boostJetFlames_ = boostJets.ToArray();
+            visuals.wingJetFlames_ = wingJets.ToArray();
+            visuals.rotationJetFlames_ = rotationJets.ToArray();
+            visuals.driverPosition_ = findCarDriver(car.transform);
+
+            placeCarWheelsVisuals(visuals, car);
+        }
+
+        void MakeMeshSkinned(SkinnedMeshRenderer renderer)
+        {
+            var mesh = renderer.sharedMesh;
+            if (mesh == null)
+            {
+                ErrorList.add("The mesh on " + renderer.gameObject.FullName() + " is null");
+                return;
+            }
+            if (!mesh.isReadable)
+            {
+                ErrorList.add("Can't read the car mesh " + mesh.name + " on " + renderer.gameObject.FullName() + "You must allow reading on it's unity inspector !");
+                return;
+            }
+            if (mesh.vertices.Length == mesh.boneWeights.Length)
+                return;
+
+            var bones = new BoneWeight[mesh.vertices.Length];
+            for (int i = 0; i < bones.Length; i++)
+                bones[i].weight0 = 1;
+            mesh.boneWeights = bones;
+            var t = renderer.transform;
+            var bindPoses = new Matrix4x4[1] { t.worldToLocalMatrix * renderer.transform.localToWorldMatrix };
+            mesh.bindposes = bindPoses;
+            renderer.bones = new Transform[1] { t };
+        }
+
+        void PlaceJets(GameObject obj, List<JetFlame> boostJets, List<JetFlame> wingJets, List<JetFlame> rotationJets)
+        {
+            int childNb = obj.transform.childCount;
+            for (int i = 0; i < childNb; i++)
+            {
+                var child = obj.GetChild(i).gameObject;
+                var name = child.name.ToLower();
+                if (m_infos.boostJet != null && name.Contains("boostjet"))
+                {
+                    var jet = GameObject.Instantiate(m_infos.boostJet, child.transform);
+                    jet.transform.localPosition = Vector3.zero;
+                    jet.transform.localRotation = Quaternion.identity;
+                    boostJets.Add(jet.GetComponentInChildren<JetFlame>());
+                }
+                else if (m_infos.wingJet != null && name.Contains("wingjet"))
+                {
+                    var jet = GameObject.Instantiate(m_infos.wingJet, child.transform);
+                    jet.transform.localPosition = Vector3.zero;
+                    jet.transform.localRotation = Quaternion.identity;
+                    wingJets.Add(jet.GetComponentInChildren<JetFlame>());
+                    wingJets.Last().rotationAxis_ = JetDirection(child.transform);
+                }
+                else if (m_infos.rotationJet != null && name.Contains("rotationjet"))
+                {
+                    var jet = GameObject.Instantiate(m_infos.rotationJet, child.transform);
+                    jet.transform.localPosition = Vector3.zero;
+                    jet.transform.localRotation = Quaternion.identity;
+                    rotationJets.Add(jet.GetComponentInChildren<JetFlame>());
+                    rotationJets.Last().rotationAxis_ = JetDirection(child.transform);
+                }
+                else if (m_infos.wingTrail != null && name.Contains("wingtrail"))
+                {
+                    var trail = GameObject.Instantiate(m_infos.wingTrail, child.transform);
+                    trail.transform.localPosition = Vector3.zero;
+                    trail.transform.localRotation = Quaternion.identity;
+                }
+                else PlaceJets(child, boostJets, wingJets, rotationJets);
+            }
+        }
+
+        Vector3 JetDirection(Transform t)
+        {
+            int nb = t.childCount;
+            for (int i = 0; i < nb; i++)
+            {
+                var n = t.GetChild(i).gameObject.name.ToLower();
+                if (!n.StartsWith("#"))
+                    continue;
+                n = n.Remove(0, 1);
+                var s = n.Split(';');
+                if (s.Length == 0)
+                    continue;
+                if (!s[0].Contains("dir"))
+                    continue;
+                if (s.Length < 2)
+                    continue;
+                if (s[1] == "front")
+                    return new Vector3(-1, 0, 0);
+                if (s[1] == "back")
+                    return new Vector3(1, 0, 0);
+                if (s[1] == "left")
+                    return new Vector3(0, 1, -1);
+                if (s[1] == "right")
+                    return new Vector3(0, -1, 1);
+                if (s.Length != 4)
+                    continue;
+                if (!s[0].Contains("dir"))
+                    continue;
+                var v = Vector3.zero;
+                float.TryParse(s[1], out v.x);
+                float.TryParse(s[2], out v.y);
+                float.TryParse(s[3], out v.z);
+                return v;
+            }
+            return Vector3.zero;
+        }
+        
+        Transform findCarDriver(Transform parent)
+        {
+            for(int i = 0; i < parent.childCount; i++)
+            {
+                var t = parent.GetChild(i);
+                if (t.gameObject.name.ToLower().Contains("driverposition"))
+                    return t;
+                return findCarDriver(t);
+            }
+            return null;
+        }
+
+        void placeCarWheelsVisuals(CarVisuals visual, GameObject car)
+        {
+            for (int i = 0; i < car.transform.childCount; i++)
+            {
+                var c = car.transform.GetChild(i).gameObject;
+                var name = c.name.ToLower();
+                if (name.Contains("wheel"))
+                {
+                    var wheelRenderer = c.GetComponentInChildren<MeshRenderer>();
+                    CarWheelVisuals comp = c.AddComponent<CarWheelVisuals>();
+                    comp.tire_ = c.GetComponentInChildren<MeshRenderer>();
+
+                    if (name.Contains("front"))
+                    {
+                        if (name.Contains("left"))
+                            visual.wheelFL_ = comp;
+                        else if (name.Contains("right"))
+                            visual.wheelFR_ = comp;
+                    }
+                    else if (name.Contains("back"))
+                    {
+                        if (name.Contains("left"))
+                            visual.wheelBL_ = comp;
+                        else if (name.Contains("right"))
+                            visual.wheelBR_ = comp;
+                    }
+                }
+            }
+        }
+
+        CarColors loadDefaultColors(GameObject car)
+        {
+            for (int i = 0; i < car.transform.childCount; i++)
+            {
+                var c = car.transform.GetChild(i).gameObject;
+                var n = c.name.ToLower();
+                if (n.Contains("defaultcolor"))
+                {
+                    for (int j = 0; j < c.transform.childCount; j++)
+                    {
+                        var o = c.transform.GetChild(j).gameObject;
+                        var name = o.name.ToLower();
+
+                        if (!name.StartsWith("#"))
+                            continue;
+
+                        name = name.Remove(0, 1); //remove #
+
+                        var s = name.Split(';');
+                        if (s.Length != 2)
+                            continue;
+
+                        CarColors cc;
+                        Color color = ColorEx.HexToColor(s[1]);
+                        color.a = 1;
+                        if (s[0] == "primary")
+                            cc.primary_ = color;
+                        else if (s[0] == "secondary")
+                            cc.secondary_ = color;
+                        else if (s[0] == "glow")
+                            cc.glow_ = color;
+                        else if (s[0] == "sparkle")
+                            cc.sparkle_ = color;
+                    }
+                }
+            }
+
+            return m_infos.defaultColors;
         }
     }
 }

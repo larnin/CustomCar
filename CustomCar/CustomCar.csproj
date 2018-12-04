@@ -47,7 +47,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CarBuilder.cs" />
-    <Compile Include="CarBuilder2.cs" />
     <Compile Include="CarInfos.cs" />
     <Compile Include="CopyComponent.cs" />
     <Compile Include="Entry.cs" />

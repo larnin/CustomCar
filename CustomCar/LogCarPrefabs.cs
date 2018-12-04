@@ -811,30 +811,5 @@ namespace CustomCar
             data.rotationAxis = f.rotationAxis_;
             return data;
         }
-
-        public static void saveTextureToFile(Texture texture, string filename)
-        {
-            Texture2D texture2D = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false);
-
-            RenderTexture currentRT = RenderTexture.active;
-
-            RenderTexture renderTexture = new RenderTexture(texture.width, texture.height, 32);
-            Graphics.Blit(texture, renderTexture);
-
-            RenderTexture.active = renderTexture;
-            texture2D.ReadPixels(new Rect(0, 0, renderTexture.width, renderTexture.height), 0, 0);
-            texture2D.Apply();
-
-            Color[] pixels = texture2D.GetPixels();
-
-            RenderTexture.active = currentRT;
-
-            var bytes = texture2D.EncodeToPNG();
-            var file = File.Open(Application.dataPath + "/exportedTextures/" + filename, FileMode.Create);
-            var binary = new BinaryWriter(file);
-            binary.Write(bytes);
-            file.Close();
-        }
-
     }
 }
