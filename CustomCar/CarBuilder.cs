@@ -585,9 +585,15 @@ namespace CustomCar
                 var name = c.name.ToLower();
                 if (name.Contains("wheel"))
                 {
-                    var wheelRenderer = c.GetComponentInChildren<MeshRenderer>();
                     CarWheelVisuals comp = c.AddComponent<CarWheelVisuals>();
-                    comp.tire_ = c.GetComponentInChildren<MeshRenderer>();
+                    foreach(var r in c.GetComponentsInChildren<MeshRenderer>())
+                    {
+                        if(r.gameObject.name.ToLower().Contains("tire"))
+                        {
+                            comp.tire_ = r;
+                            break;
+                        }
+                    }
 
                     if (name.Contains("front"))
                     {

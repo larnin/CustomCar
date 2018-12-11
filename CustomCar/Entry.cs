@@ -42,7 +42,8 @@ namespace CustomCar
                 Console.Out.WriteLine(e.ToString());
             }
 
-            LogCarPrefabs.logCars();
+            //disable loging cars
+            //LogCarPrefabs.logCars();
 
             Events.MainMenu.Initialized.Subscribe(data =>
             {
@@ -55,6 +56,7 @@ namespace CustomCar
 
         public void Update()
         {
+            //don't export anything
             //if(currentIndex < LogCarPrefabs.allTextures.Count)
             //{
             //    Texture t = LogCarPrefabs.allTextures[currentIndex];
