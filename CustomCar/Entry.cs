@@ -1,12 +1,7 @@
-﻿using Spectrum.API;
-using Spectrum.API.Interfaces.Plugins;
+﻿using Spectrum.API.Interfaces.Plugins;
 using Spectrum.API.Interfaces.Systems;
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using System;
-using Spectrum.API.Configuration;
-using System.IO;
 using Harmony;
 using System.Reflection;
 using Spectrum.API.Storage;
