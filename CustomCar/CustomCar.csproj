@@ -21,6 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -31,18 +32,22 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Assembly-CSharp, Version=9.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Spectrum\Spectrum.Dependencies\Assembly-CSharp.dll</HintPath>
+    <Reference Include="0Harmony">
+      <HintPath>D:\Steam\steamapps\common\Distance\Distance_Data\Spectrum\0Harmony.dll</HintPath>
     </Reference>
-    <Reference Include="JsonFx, Version=2.0.1209.2802, Culture=neutral, PublicKeyToken=315052dd637f8a52, processorArchitecture=MSIL">
-      <HintPath>..\packages\JsonFx.2.0.1209.2802\lib\net35\JsonFx.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Assembly-CSharp.dev">
+      <HintPath>D:\Steam\steamapps\common\Distance\Distance_Data\Managed\Assembly-CSharp.dev.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>D:\Steam\steamapps\common\Distance\Distance_Data\Spectrum\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Spectrum.API">
+      <HintPath>D:\Steam\steamapps\common\Distance\Distance_Data\Spectrum\Spectrum.API.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="UnityEngine">
-      <HintPath>..\Spectrum\Spectrum.Dependencies\UnityEngine.dll</HintPath>
+      <HintPath>D:\Steam\steamapps\common\Distance\Distance_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -65,20 +70,6 @@
   <Target Name="AfterBuild">
   </Target>
   -->
-  <ItemGroup>
-    <ProjectReference Include="..\Harmony\Harmony\Harmony.csproj">
-      <Project>{69AEE16A-B6E7-4642-8081-3928B32455DF}</Project>
-      <Name>Harmony</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Spectrum\Spectrum.API\Spectrum.API.csproj">
-      <Project>{a9cfd86d-1604-4c80-b02b-e60ad98ba86f}</Project>
-      <Name>Spectrum.API</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Spectrum\Spectrum.Interop\Spectrum.Interop.csproj">
-      <Project>{77c20b4a-284c-4b3d-a5b5-b254e637fb47}</Project>
-      <Name>Spectrum.Interop</Name>
-    </ProjectReference>
-  </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
