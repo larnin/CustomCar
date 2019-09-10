@@ -36,6 +36,7 @@ namespace CustomCar
             profileManager.carInfos_ = new CarInfo[oldCars.Length + cars.Count];
 
             var unlocked = (Dictionary<string, int>)profileManager.GetType().GetField("unlockedCars_", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(profileManager);
+            var knowCars = (Dictionary<string, int>)profileManager.GetType().GetField("knownCars_", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(profileManager);
 
             for (int i = 0; i < profileManager.carInfos_.Length; i++)
             {
@@ -54,6 +55,7 @@ namespace CustomCar
                 car.colors_ = carsInfos[index].colors;
                 profileManager.carInfos_[i] = car;
                 unlocked.Add(car.name_, i);
+                knowCars.Add(car.name_, i);
             }
 
             var carColors = new CarColors[oldCars.Length + cars.Count];
