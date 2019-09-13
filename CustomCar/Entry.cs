@@ -23,6 +23,7 @@ namespace CustomCar
             {
                 Console.Out.WriteLine(e.ToString());
             }
+
             
             try
             {
@@ -36,6 +37,8 @@ namespace CustomCar
                 ErrorList.add("An error occured while trying to load cars assets");
                 Console.Out.WriteLine(e.ToString());
             }
+
+            ReloadProfiles();
 
             //disable loging cars
             //LogCarPrefabs.logCars();
@@ -69,6 +72,18 @@ namespace CustomCar
             //    Console.Out.WriteLine("saved obj " + m.name);
             //    currentIndex++;
             //}
+        }
+
+        void ReloadProfiles()
+        {
+            var profileManager = G.Sys.ProfileManager_;
+
+            if (profileManager == null)
+                return;
+
+            profileManager.GetType().GetField("profiles_", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(profileManager, new List<Profile>());
+
+            profileManager.GetType().GetMethod("LoadProfiles", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(profileManager, null);
         }
     }
 }

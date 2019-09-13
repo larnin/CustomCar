@@ -66,6 +66,10 @@ namespace CustomCar
             {
                 Profile p = profileManager.GetProfile(i);
 
+                var oldColorList = p.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(p) as CarColors[];
+                for (int j = 0; j < oldColorList.Length && j < carColors.Length; j++)
+                    carColors[j] = oldColorList[j];
+
                 var field = p.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic);
                 field.SetValue(p, carColors);
             }

@@ -1,5 +1,8 @@
 ﻿using Harmony;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using UnityEngine;
 
 namespace CustomCar
@@ -55,6 +58,47 @@ namespace CustomCar
             field.SetValue(__instance, true);
 
             return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(Profile), "Visit")]
+    [HarmonyPatch("CheckForErrors")]
+    internal class ProfileVisit
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var codes = new List<CodeInstruction>(instructions);
+
+            codes.Insert(0, new CodeInstruction(OpCodes.Ldarg_0));
+            codes.Insert(1, new CodeInstruction(OpCodes.Ldarg_1));
+            codes.Insert(2, new CodeInstruction(OpCodes.Ldarg_2));
+            codes.Insert(3, new CodeInstruction(OpCodes.Ldarg_3));
+            codes.Insert(4, new CodeInstruction(OpCodes.Callvirt, typeof(ProfileVisit).GetMethod("VisitOthersCars", BindingFlags.Static | BindingFlags.NonPublic)));
+
+            return codes.AsEnumerable();
+        }
+
+        static void VisitOthersCars(Profile __instance, IVisitor visitor, ISerializable prefabComp, int version)
+        {
+            var colors = __instance.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(__instance) as CarColors[];
+
+            for (int i = 6; i < colors.Length; i++)
+            {
+                colors[i].OnVisit(visitor, i.ToString());
+            }
+
+            int carInfosLength = G.Sys.ProfileManager_.carInfos_.Length;
+            if (carInfosLength > colors.Length)
+            {
+                var colors2 = new CarColors[carInfosLength];
+                for (int i = 0; i < colors.Length; i++)
+                    colors2[i] = colors[i];
+                for (int i = colors.Length; i < carInfosLength; i++)
+                    colors2[i].OnVisit(visitor, i.ToString());
+                colors = colors2;
+            }
+
+            __instance.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(__instance, colors);
         }
     }
 

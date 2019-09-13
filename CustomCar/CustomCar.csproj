@@ -33,21 +33,21 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="0Harmony">
-      <HintPath>D:\Steam\steamapps\common\Distance\Distance_Data\Spectrum\0Harmony.dll</HintPath>
+      <HintPath>..\..\..\Steam\steamapps\common\Distance\Distance_Data\Spectrum\Plugins\CustomCar\Dependencies\0Harmony.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp.dev">
-      <HintPath>D:\Steam\steamapps\common\Distance\Distance_Data\Managed\Assembly-CSharp.dev.dll</HintPath>
+      <HintPath>..\..\..\Steam\steamapps\common\Distance\Distance_Data\Managed\Assembly-CSharp.dev.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>D:\Steam\steamapps\common\Distance\Distance_Data\Spectrum\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\..\Steam\steamapps\common\Distance\Distance_Data\Spectrum\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="Spectrum.API">
-      <HintPath>D:\Steam\steamapps\common\Distance\Distance_Data\Spectrum\Spectrum.API.dll</HintPath>
+      <HintPath>..\..\..\Steam\steamapps\common\Distance\Distance_Data\Spectrum\Spectrum.API.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="UnityEngine">
-      <HintPath>D:\Steam\steamapps\common\Distance\Distance_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>..\..\..\Steam\steamapps\common\Distance\Distance_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
