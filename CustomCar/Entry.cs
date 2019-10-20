@@ -5,6 +5,7 @@ using System;
 using Harmony;
 using System.Reflection;
 using Spectrum.API.Storage;
+using UnityEngine;
 
 namespace CustomCar
 {
@@ -81,9 +82,37 @@ namespace CustomCar
             if (profileManager == null)
                 return;
 
-            profileManager.GetType().GetField("profiles_", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(profileManager, new List<Profile>());
+            var profiles = profileManager.GetType().GetField("profiles_", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(profileManager) as List<Profile>;
 
-            profileManager.GetType().GetMethod("LoadProfiles", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(profileManager, null);
+            LoadProfiles(profiles);
+
+            //profileManager.GetType().GetField("profiles_", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(profileManager, new List<Profile>());
+
+            //profileManager.GetType().GetMethod("LoadProfiles", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(profileManager, null);
+        }
+
+        void LoadProfiles(List<Profile> profiles)
+        {
+            List<string> filePathsInDirWithPattern = Resource.GetFilePathsInDirWithPattern(Resource.PersonalProfilesDirPath_, "*.xml", null);
+            int index = 0;
+
+            foreach (string current in filePathsInDirWithPattern)
+            {
+                if (profiles.Count <= index)
+                    break;
+                
+                Profile profile = Profile.Load(current);
+                if (profile == null)
+                    continue;
+                
+                Profile baseProfile = profiles[index];
+                var carColorList_ = profile.GetType().GetField("carColorsList_", BindingFlags.NonPublic | BindingFlags.Instance);
+                carColorList_.SetValue(baseProfile, carColorList_.GetValue(profile));
+
+                GameObject.Destroy(profile.gameObject);
+
+                index++;
+            }
         }
     }
 }
