@@ -65,18 +65,25 @@ namespace CustomCar
     [HarmonyPatch("CheckForErrors")]
     internal class ProfileVisit
     {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        static bool Prefix(Profile __instance, IVisitor visitor, ISerializable prefabComp, int version)
         {
-            var codes = new List<CodeInstruction>(instructions);
+            VisitOthersCars(__instance, visitor, prefabComp, version);
 
-            codes.Insert(0, new CodeInstruction(OpCodes.Ldarg_0));
-            codes.Insert(1, new CodeInstruction(OpCodes.Ldarg_1));
-            codes.Insert(2, new CodeInstruction(OpCodes.Ldarg_2));
-            codes.Insert(3, new CodeInstruction(OpCodes.Ldarg_3));
-            codes.Insert(4, new CodeInstruction(OpCodes.Callvirt, typeof(ProfileVisit).GetMethod("VisitOthersCars", BindingFlags.Static | BindingFlags.NonPublic)));
-
-            return codes.AsEnumerable();
+            return true;
         }
+
+        //static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        //{
+        //    var codes = new List<CodeInstruction>(instructions);
+
+        //    codes.Insert(0, new CodeInstruction(OpCodes.Ldarg_0));
+        //    codes.Insert(1, new CodeInstruction(OpCodes.Ldarg_1));
+        //    codes.Insert(2, new CodeInstruction(OpCodes.Ldarg_2));
+        //    codes.Insert(3, new CodeInstruction(OpCodes.Ldarg_3));
+        //    codes.Insert(4, new CodeInstruction(OpCodes.Callvirt, typeof(ProfileVisit).GetMethod("VisitOthersCars", BindingFlags.Static | BindingFlags.NonPublic)));
+
+        //    return codes.AsEnumerable();
+        //}
 
         static void VisitOthersCars(Profile __instance, IVisitor visitor, ISerializable prefabComp, int version)
         {
