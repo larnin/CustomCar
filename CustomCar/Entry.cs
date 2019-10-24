@@ -2,7 +2,7 @@
 using Spectrum.API.Interfaces.Systems;
 using System.Collections.Generic;
 using System;
-using Harmony;
+using HarmonyLib;
 using System.Reflection;
 using Spectrum.API.Storage;
 using UnityEngine;
@@ -17,7 +17,8 @@ namespace CustomCar
         {
             try
             {
-                var harmony = HarmonyInstance.Create("com.Larnin.CustomCar");
+                var harmony = new Harmony("com.Larnin.CustomCar");
+                
                 harmony.PatchAll(Assembly.GetExecutingAssembly());
             }
             catch(Exception e)

@@ -1,4 +1,6 @@
-﻿using Harmony;
+﻿using HarmonyLib;
+using Serializers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -6,27 +8,12 @@ using System.Reflection.Emit;
 using UnityEngine;
 
 namespace CustomCar
-{
-    //[HarmonyPatch(typeof(Profile), "GetColorsForIndex")]
-    //internal class ProfileGetColorsForIndex
-    //{
-    //    static bool Prefix(Profile __instance, ref int index)
-    //    {
-    //        try
-    //        {
-    //            var carColorsList = (CarColors[])__instance.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(__instance);
-
-    //            if (index >= carColorsList.Length)
-    //                index = 0;
-    //        }
-    //        catch (Exception e)
-    //        {
-    //            Console.Out.WriteLine(e.ToString());
-    //        }
-
-    //        return true;
-    //    }
-    //}
+{   
+    internal static class CustomCarsPatchInfos
+    {
+        public static int carCount = 0;
+        public  const int baseCarCount = 6;
+    }
 
     [HarmonyPatch(typeof(Profile), "Awake")]
     internal class ProfileAwake
@@ -61,8 +48,43 @@ namespace CustomCar
         }
     }
 
+    [HarmonyPatch(typeof(XmlDeserializer), "ReadVersionNumber")]
+    internal class XmlDeserializerReadVersionNumber
+    {
+        static bool Prefix(XmlDeserializer __instance)
+        {
+            string attribute = __instance.GetAttribute("CustomCarCount");
+            if (attribute != null)
+                CustomCarsPatchInfos.carCount = Convert.ToInt32(attribute);
+            else CustomCarsPatchInfos.carCount = 0;
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(XmlSerializer), "WriteComponentStart")]
+    internal class XmlSerializerWriteComponentStart
+    {
+        static void PostFix(XmlSerializer __instance, string componentName, Component component, int componentVersion)
+        {
+            if(component is Profile)
+                __instance.WriteAttribute("CustomCarCount", CustomCarsPatchInfos.carCount.ToString());
+        }
+    }
+
+    [HarmonyPatch(typeof(Profile), "Save")]
+    internal class ProfileSave
+    {
+        static bool Prefix(Profile __instance)
+        {
+            var colors = __instance.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(__instance) as CarColors[];
+            CustomCarsPatchInfos.carCount = colors.Length - CustomCarsPatchInfos.baseCarCount;
+
+            return true;
+        }
+    }
+
+
     [HarmonyPatch(typeof(Profile), "Visit")]
-    [HarmonyPatch("CheckForErrors")]
     internal class ProfileVisit
     {
         static bool Prefix(Profile __instance, IVisitor visitor, ISerializable prefabComp, int version)
@@ -72,26 +94,14 @@ namespace CustomCar
             return true;
         }
 
-        //static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-        //{
-        //    var codes = new List<CodeInstruction>(instructions);
-
-        //    codes.Insert(0, new CodeInstruction(OpCodes.Ldarg_0));
-        //    codes.Insert(1, new CodeInstruction(OpCodes.Ldarg_1));
-        //    codes.Insert(2, new CodeInstruction(OpCodes.Ldarg_2));
-        //    codes.Insert(3, new CodeInstruction(OpCodes.Ldarg_3));
-        //    codes.Insert(4, new CodeInstruction(OpCodes.Callvirt, typeof(ProfileVisit).GetMethod("VisitOthersCars", BindingFlags.Static | BindingFlags.NonPublic)));
-
-        //    return codes.AsEnumerable();
-        //}
-
         static void VisitOthersCars(Profile __instance, IVisitor visitor, ISerializable prefabComp, int version)
         {
             var colors = __instance.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(__instance) as CarColors[];
-
-            for (int i = 6; i < colors.Length; i++)
+            
+            for (int i = CustomCarsPatchInfos.baseCarCount; i < colors.Length; i++)
             {
-                colors[i].OnVisit(visitor, i.ToString());
+                if(i - CustomCarsPatchInfos.baseCarCount < CustomCarsPatchInfos.carCount)
+                    colors[i].OnVisit(visitor, i.ToString());
             }
 
             int carInfosLength = G.Sys.ProfileManager_.carInfos_.Length;
@@ -101,40 +111,14 @@ namespace CustomCar
                 for (int i = 0; i < colors.Length; i++)
                     colors2[i] = colors[i];
                 for (int i = colors.Length; i < carInfosLength; i++)
-                    colors2[i].OnVisit(visitor, i.ToString());
+                    if(i - CustomCarsPatchInfos.baseCarCount < CustomCarsPatchInfos.carCount)
+                        colors2[i].OnVisit(visitor, i.ToString());
                 colors = colors2;
             }
 
             __instance.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(__instance, colors);
         }
     }
-
-    //trying to fix colors loading - it look like that does nothing
-    //[HarmonyPatch(typeof(Profile), "Visit")]
-    //[HarmonyPatch("CheckForErrors")]
-    //internal class ProfileVisit
-    //{
-    //    static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-    //    {
-    //        var codes = new List<CodeInstruction>(instructions);
-
-    //        for(int i = 0; i < codes.Count; i++)
-    //        {
-    //            if(codes[i].opcode == OpCodes.Blt) //on the for
-    //            {
-    //                int index = i - 1;
-    //                codes.RemoveAt(index);
-    //                codes.Insert(index, new CodeInstruction(OpCodes.Ldarg_0));
-    //                codes.Insert(index + 1, new CodeInstruction(OpCodes.Ldfld, typeof(Profile).GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic)));
-    //                codes.Insert(index + 2, new CodeInstruction(OpCodes.Ldlen));
-    //                codes.Insert(index + 3, new CodeInstruction(OpCodes.Conv_I4));
-    //                break;
-    //            }
-    //        }
-
-    //        return codes.AsEnumerable();
-    //    }
-    //}
 
     //change additive to blend animation blendMode
     [HarmonyPatch(typeof(GadgetWithAnimation), "SetAnimationStateValues")]
