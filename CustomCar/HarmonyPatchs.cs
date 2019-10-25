@@ -176,4 +176,13 @@ namespace CustomCar
             return false;
         }
     }
+
+    [HarmonyPatch(typeof(HornGadget), "OnCarHornEvent")]
+    internal class HornGadgetOnCarHornEvent
+    {
+        static void Postfix(HornGadget __instance, Horn.Data data)
+        {
+            LogCarPrefabs.LogObjectAndChilds(__instance.gameObject);
+        }
+    }
 }

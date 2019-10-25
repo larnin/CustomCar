@@ -284,6 +284,35 @@ namespace CustomCar
             Console.Out.WriteLine("mesh nb : " + allMeshs.Count);
         }
 
+        public static void LogObjectAndChilds(GameObject obj)
+        {
+
+            Spectrum.API.Logging.Logger logger = new Spectrum.API.Logging.Logger("CustomCar_" + obj.name);
+
+            Console.Out.WriteLine("Trying to extract infos from " + obj.name);
+
+            try
+            {
+                var objInfo = getGameObjectInfos(obj);
+                
+                string json = objInfo.toJson();
+
+                logger.WriteLine(json);
+
+                Console.Out.WriteLine("Object extracted !");
+            }
+            catch (Exception e)
+            {
+                Console.Out.WriteLine(e.Message);
+                Console.Out.WriteLine(e.Source);
+                Console.Out.WriteLine(e.StackTrace);
+                Console.Out.WriteLine(e.ToString());
+            }
+            Console.Out.WriteLine("textures nb : " + allTextures.Count);
+            Console.Out.WriteLine("mesh nb : " + allMeshs.Count);
+
+        }
+
         public static List<Texture> allTextures = new List<Texture>();
         public static List<Mesh> allMeshs = new List<Mesh>();
 
@@ -464,7 +493,7 @@ namespace CustomCar
                     var clip = state.clip;
                     s += "{\"name\":\"" + state.name + "\",\"clipName\":\"" + clip.name + "\",\"lenght\":" + clip.length + ",\"framerate\":" + clip.frameRate + ",\"speed\":" + state.speed
                         + ",\"weight\":" + state.weight + ",\"warpMode\":\"" + state.wrapMode.ToString() + "\",\"legacy\":\"" + (clip.legacy ? "true" : "false")
-                        + "\",\"blendMode\":\"" + state.blendMode.ToString() + "\",\"bounds\":" + JsonEx.toJson(clip.localBounds) + "\"Events\":{";
+                        + "\",\"blendMode\":\"" + state.blendMode.ToString() + "\",\"bounds\":" + JsonEx.toJson(clip.localBounds) + ",\"Events\":{";
 
                     for(int j = 0; j < clip.events.Length; j++)
                     {
