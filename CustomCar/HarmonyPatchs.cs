@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using Events.Car;
+using HarmonyLib;
 using Serializers;
 using System;
 using System.Collections.Generic;
@@ -61,12 +62,12 @@ namespace CustomCar
         }
     }
 
-    [HarmonyPatch(typeof(XmlSerializer), "WriteComponentStart")]
-    internal class XmlSerializerWriteComponentStart
+    [HarmonyPatch(typeof(Serializers.XmlSerializer), "WriteISerializableComponentStart")]
+    internal class XmlSerializerWriteISerializableComponentStart
     {
-        static void PostFix(XmlSerializer __instance, string componentName, Component component, int componentVersion)
+        static void PostFix(Serializers.XmlSerializer __instance, ISerializable serializable)
         {
-            if(component is Profile)
+            if(serializable is Profile)
                 __instance.WriteAttribute("CustomCarCount", CustomCarsPatchInfos.carCount.ToString());
         }
     }
@@ -177,12 +178,12 @@ namespace CustomCar
         }
     }
 
-    [HarmonyPatch(typeof(HornGadget), "OnCarHornEvent")]
-    internal class HornGadgetOnCarHornEvent
-    {
-        static void Postfix(HornGadget __instance, Horn.Data data)
-        {
-            LogCarPrefabs.LogObjectAndChilds(__instance.gameObject);
-        }
-    }
+    //[HarmonyPatch(typeof(HornGadget), "OnCarHornEvent")]
+    //internal class HornGadgetOnCarHornEvent
+    //{
+    //    static void Postfix(HornGadget __instance, Horn.Data data)
+    //    {
+    //        LogCarPrefabs.LogObjectAndChilds(__instance.gameObject);
+    //    }
+    //}
 }
