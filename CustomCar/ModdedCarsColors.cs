@@ -21,7 +21,7 @@ namespace CustomCar
 
             var profiles = profileManager.GetType().GetField("profiles_", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(profileManager) as List<Profile>;
 
-            foreach(var profile in profiles)
+            foreach (var profile in profiles)
             {
                 var colors = profile.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(profile) as CarColors[];
 
@@ -33,31 +33,40 @@ namespace CustomCar
                         colors2[i] = colors[i];
                     colors = colors2;
                 }
+
+                Section[] sProfile = null;
+                try { sProfile = settings.GetItem<Section[]>(profile.Name_); } catch { }
+
+                if (sProfile == null)
+                    continue;
                 
-                for(int i = CustomCarsPatchInfos.baseCarCount; i < carInfosLength; i++)
-                    LoadCarColors(settings, profile.Name_, i, ref colors[i]);
+                for(int i = 0; i < sProfile.Length; i++)
+                {
+                    LoadCarColors(sProfile[i], ref colors[i + CustomCarsPatchInfos.baseCarCount]);
+                }
 
                 profile.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(profile, colors);
             }
         }
 
-        static void LoadCarColors(Settings settings, string profileName, int index, ref CarColors colors)
+        static void LoadCarColors(Section settings, ref CarColors colors)
         {
-            string baseKey = profileName + ".." + index;
-
-            LoadColor(settings, ref colors.primary_, baseKey + "..primary_");
-            LoadColor(settings, ref colors.secondary_, baseKey + "..secondary_");
-            LoadColor(settings, ref colors.glow_, baseKey + "..glow_");
-            LoadColor(settings, ref colors.sparkle_, baseKey + "..sparkle_");
+            try { LoadColor(settings.GetItem<Section>("primary"), ref colors.primary_); } catch { }
+            try { LoadColor(settings.GetItem<Section>("secondary"), ref colors.secondary_); } catch { }
+            try { LoadColor(settings.GetItem<Section>("glow"), ref colors.glow_); } catch { }
+            try { LoadColor(settings.GetItem<Section>("sparkle"), ref colors.sparkle_); } catch { }
 
         }
 
-        static void LoadColor(Settings settings, ref Color color, string baseKey)
+        static void LoadColor(Section settings, ref Color color)
         {
-            color.r = settings.GetOrCreate<float>(baseKey + "..r", color.r);
-            color.g = settings.GetOrCreate<float>(baseKey + "..g", color.g);
-            color.b = settings.GetOrCreate<float>(baseKey + "..b", color.b);
-            color.a = settings.GetOrCreate<float>(baseKey + "..a", color.a);
+            if (settings == null)
+                return;
+
+            color.r = settings.GetOrCreate<float>("r", color.r);
+            color.g = settings.GetOrCreate<float>("g", color.g);
+            color.b = settings.GetOrCreate<float>("b", color.b);
+            color.a = settings.GetOrCreate<float>("a", color.a);
         }
 
         public static void SaveAll()
@@ -76,29 +85,45 @@ namespace CustomCar
             {
                 var colors = profile.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(profile) as CarColors[];
 
-                for (int i = CustomCarsPatchInfos.baseCarCount; i < colors.Length; i++)
-                    SaveCarsColors(settings, profile.Name_, i, colors[i]);
+                if (colors.Length <= CustomCarsPatchInfos.baseCarCount)
+                    continue;
+
+                var sProfile = new Section[colors.Length - CustomCarsPatchInfos.baseCarCount];
+                settings[profile.Name_] = sProfile;
+
+                for (int i = 0; i < sProfile.Length; i++)
+                {
+                    sProfile[i] = new Section();
+                    SaveCarsColors(sProfile[i], colors[i + CustomCarsPatchInfos.baseCarCount]);
+                }
             }
 
             settings.Save();
         }
 
-        static void SaveCarsColors(Settings settings, string profileName, int index, CarColors colors)
+        static void SaveCarsColors(Section settings, CarColors colors)
         {
-            string baseKey = profileName + ".." + index;
+            var sPrimary = new Section();
+            SaveColor(sPrimary, colors.primary_);
+            var sSecondary = new Section();
+            SaveColor(sSecondary, colors.secondary_);
+            var sGlow = new Section();
+            SaveColor(sGlow, colors.glow_);
+            var sSparkle = new Section();
+            SaveColor(sSparkle, colors.sparkle_);
 
-            SaveColor(settings, colors.primary_, baseKey + "..primary_");
-            SaveColor(settings, colors.secondary_, baseKey + "..secondary_");
-            SaveColor(settings, colors.glow_, baseKey + "..glow_");
-            SaveColor(settings, colors.sparkle_, baseKey + "..sparkle_");
+            settings["primary"] = sPrimary;
+            settings["secondary"] = sSecondary;
+            settings["glow"] = sGlow;
+            settings["sparkle"] = sSparkle;
         }
 
-        static void SaveColor(Settings settings, Color color, string baseKey)
+        static void SaveColor(Section settings, Color color)
         {
-            settings.Add(baseKey + "..r", color.r);
-            settings.Add(baseKey + "..g", color.g);
-            settings.Add(baseKey + "..b", color.b);
-            settings.Add(baseKey + "..a", color.a);
+            settings.Add("r", color.r);
+            settings.Add("g", color.g);
+            settings.Add("b", color.b);
+            settings.Add("a", color.a);
         }
     }
 }
