@@ -48,76 +48,13 @@ namespace CustomCar
             return false;
         }
     }
-
-    [HarmonyPatch(typeof(XmlDeserializer), "ReadVersionNumber")]
-    internal class XmlDeserializerReadVersionNumber
-    {
-        static bool Prefix(XmlDeserializer __instance)
-        {
-            string attribute = __instance.GetAttribute("CustomCarCount");
-            if (attribute != null)
-                CustomCarsPatchInfos.carCount = Convert.ToInt32(attribute);
-            else CustomCarsPatchInfos.carCount = 0;
-            return true;
-        }
-    }
-
-    [HarmonyPatch(typeof(Serializers.XmlSerializer), "WriteISerializableComponentStart")]
-    internal class XmlSerializerWriteISerializableComponentStart
-    {
-        static void PostFix(Serializers.XmlSerializer __instance, ISerializable serializable)
-        {
-            if(serializable is Profile)
-                __instance.WriteAttribute("CustomCarCount", CustomCarsPatchInfos.carCount.ToString());
-        }
-    }
-
+    
     [HarmonyPatch(typeof(Profile), "Save")]
     internal class ProfileSave
     {
-        static bool Prefix(Profile __instance)
+        static void Postfix(Profile __instance)
         {
-            var colors = __instance.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(__instance) as CarColors[];
-            CustomCarsPatchInfos.carCount = colors.Length - CustomCarsPatchInfos.baseCarCount;
-
-            return true;
-        }
-    }
-
-
-    [HarmonyPatch(typeof(Profile), "Visit")]
-    internal class ProfileVisit
-    {
-        static bool Prefix(Profile __instance, IVisitor visitor, ISerializable prefabComp, int version)
-        {
-            VisitOthersCars(__instance, visitor, prefabComp, version);
-
-            return true;
-        }
-
-        static void VisitOthersCars(Profile __instance, IVisitor visitor, ISerializable prefabComp, int version)
-        {
-            var colors = __instance.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(__instance) as CarColors[];
-            
-            for (int i = CustomCarsPatchInfos.baseCarCount; i < colors.Length; i++)
-            {
-                if(i - CustomCarsPatchInfos.baseCarCount < CustomCarsPatchInfos.carCount)
-                    colors[i].OnVisit(visitor, i.ToString());
-            }
-
-            int carInfosLength = G.Sys.ProfileManager_.carInfos_.Length;
-            if (carInfosLength > colors.Length)
-            {
-                var colors2 = new CarColors[carInfosLength];
-                for (int i = 0; i < colors.Length; i++)
-                    colors2[i] = colors[i];
-                for (int i = colors.Length; i < carInfosLength; i++)
-                    if(i - CustomCarsPatchInfos.baseCarCount < CustomCarsPatchInfos.carCount)
-                        colors2[i].OnVisit(visitor, i.ToString());
-                colors = colors2;
-            }
-
-            __instance.GetType().GetField("carColorsList_", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(__instance, colors);
+            ModdedCarsColors.SaveAll();
         }
     }
 

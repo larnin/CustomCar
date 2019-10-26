@@ -40,7 +40,7 @@ namespace CustomCar
                 Console.Out.WriteLine(e.ToString());
             }
 
-            ReloadProfiles();
+            ModdedCarsColors.LoadAll();
 
             //disable loging cars
             //LogCarPrefabs.logCars();
@@ -74,46 +74,6 @@ namespace CustomCar
             //    Console.Out.WriteLine("saved obj " + m.name);
             //    currentIndex++;
             //}
-        }
-
-        void ReloadProfiles()
-        {
-            var profileManager = G.Sys.ProfileManager_;
-
-            if (profileManager == null)
-                return;
-
-            var profiles = profileManager.GetType().GetField("profiles_", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(profileManager) as List<Profile>;
-
-            LoadProfiles(profiles);
-
-            //profileManager.GetType().GetField("profiles_", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(profileManager, new List<Profile>());
-
-            //profileManager.GetType().GetMethod("LoadProfiles", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(profileManager, null);
-        }
-
-        void LoadProfiles(List<Profile> profiles)
-        {
-            List<string> filePathsInDirWithPattern = Resource.GetFilePathsInDirWithPattern(Resource.PersonalProfilesDirPath_, "*.xml", null);
-            int index = 0;
-
-            foreach (string current in filePathsInDirWithPattern)
-            {
-                if (profiles.Count <= index)
-                    break;
-                
-                Profile profile = Profile.Load(current);
-                if (profile == null)
-                    continue;
-                
-                Profile baseProfile = profiles[index];
-                var carColorList_ = profile.GetType().GetField("carColorsList_", BindingFlags.NonPublic | BindingFlags.Instance);
-                carColorList_.SetValue(baseProfile, carColorList_.GetValue(profile));
-
-                GameObject.Destroy(profile.gameObject);
-
-                index++;
-            }
         }
     }
 }
