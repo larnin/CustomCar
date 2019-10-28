@@ -26,6 +26,7 @@ namespace CustomCar
                 Console.Out.WriteLine(e.ToString());
             }
 
+            //AudioPlayer.Init();
             
             try
             {
@@ -76,4 +77,6 @@ namespace CustomCar
             //}
         }
     }
+
+    
 }
