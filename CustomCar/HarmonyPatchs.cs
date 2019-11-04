@@ -115,12 +115,14 @@ namespace CustomCar
         }
     }
 
-    //[HarmonyPatch(typeof(HornGadget), "OnCarHornEvent")]
-    //internal class HornGadgetOnCarHornEvent
-    //{
-    //    static void Postfix(HornGadget __instance, Horn.Data data)
-    //    {
-    //        LogCarPrefabs.LogObjectAndChilds(__instance.gameObject);
-    //    }
-    //}
+    [HarmonyPatch(typeof(CarAudio), "OnCarHornEvent")]
+    internal class HornGadgetOnCarHornEvent
+    {
+        static bool Prefix(CarAudio __instance, Horn.Data data)
+        {
+            AudioPlayer.Play();
+
+            return false;
+        }
+    }
 }

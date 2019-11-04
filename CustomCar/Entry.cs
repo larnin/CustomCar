@@ -26,7 +26,7 @@ namespace CustomCar
                 Console.Out.WriteLine(e.ToString());
             }
 
-            //AudioPlayer.Init();
+            AudioPlayer.Init();
             
             try
             {
