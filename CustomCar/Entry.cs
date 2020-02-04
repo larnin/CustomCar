@@ -57,6 +57,7 @@ namespace CustomCar
 
         public void Update()
         {
+            AudioPlayer.Update();
             //don't export anything
             //if(currentIndex < LogCarPrefabs.allTextures.Count)
             //{

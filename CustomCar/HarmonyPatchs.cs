@@ -116,7 +116,7 @@ namespace CustomCar
     }
 
     [HarmonyPatch(typeof(CarAudio), "OnCarHornEvent")]
-    internal class HornGadgetOnCarHornEvent
+    internal class CarAudiotOnCarHornEvent
     {
         static bool Prefix(CarAudio __instance, Horn.Data data)
         {
