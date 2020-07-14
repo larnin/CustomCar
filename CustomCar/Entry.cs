@@ -11,8 +11,6 @@ namespace CustomCar
 {
     public class Entry : IPlugin, IUpdatable
     {
-        List<Assets> assets = new List<Assets>();
-
         public void Initialize(IManager manager, string ipcIdentifier)
         {
             try
@@ -26,7 +24,7 @@ namespace CustomCar
                 Console.Out.WriteLine(e.ToString());
             }
 
-            AudioPlayer.Init();
+            //AudioPlayer.Init();
             
             try
             {
@@ -57,7 +55,7 @@ namespace CustomCar
 
         public void Update()
         {
-            AudioPlayer.Update();
+            //AudioPlayer.Update();
             //don't export anything
             //if(currentIndex < LogCarPrefabs.allTextures.Count)
             //{
