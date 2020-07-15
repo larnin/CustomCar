@@ -73,6 +73,7 @@
     <Compile Include="ModdedCarsColors.cs" />
     <Compile Include="ObjExporter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ShaderList.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -13,6 +13,8 @@ namespace CustomCar
     {
         public void Initialize(IManager manager, string ipcIdentifier)
         {
+            ShaderList.Exec();
+
             try
             {
                 var harmony = new Harmony("com.Larnin.CustomCar");
