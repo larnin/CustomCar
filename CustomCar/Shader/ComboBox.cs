@@ -16,6 +16,9 @@ namespace CustomCar
         private string m_boxStyle;
         private GUIStyle m_listStyle;
 
+        private Rect m_rect;
+        private bool m_done;
+
         public ComboBox(GUIContent buttonContent, GUIContent[] listContent, GUIStyle listStyle)
         {
             m_buttonContent = buttonContent;
@@ -74,7 +77,7 @@ namespace CustomCar
                 m_isClickedComboButton = false;
             }
 
-            bool done = false;
+            m_done = false;
             int controlID = GUIUtility.GetControlID(FocusType.Passive);
 
             switch (Event.current.GetTypeForControl(controlID))
@@ -83,7 +86,7 @@ namespace CustomCar
                     {
                         if (m_isClickedComboButton)
                         {
-                            done = true;
+                            m_done = true;
                         }
                     }
                     break;
@@ -92,10 +95,7 @@ namespace CustomCar
             if (GUILayout.Button(m_buttonContent, m_buttonStyle))
             {
                 if (m_useControlID == -1)
-                {
                     m_useControlID = controlID;
-                    m_isClickedComboButton = false;
-                }
 
                 if (m_useControlID != controlID)
                 {
@@ -106,11 +106,18 @@ namespace CustomCar
             }
 
             if (m_isClickedComboButton)
-            {
-                var rect = GUILayoutUtility.GetLastRect();
+                m_rect = GUILayoutUtility.GetLastRect();
+            
+            return m_selectedItemIndex;
+        }
 
-                Rect listRect = new Rect(rect.x, rect.y + m_listStyle.CalcHeight(m_listContent[0], 1.0f),
-                          rect.width, m_listStyle.CalcHeight(m_listContent[0], 1.0f) * m_listContent.Length);
+        public void DisplayList()
+        {
+            if (m_isClickedComboButton)
+            {
+
+                Rect listRect = new Rect(m_rect.x, m_rect.y + m_listStyle.CalcHeight(m_listContent[0], 1.0f),
+                            m_rect.width, m_listStyle.CalcHeight(m_listContent[0], 1.0f) * m_listContent.Length);
 
                 GUI.Box(listRect, "", m_boxStyle);
                 int newSelectedItemIndex = GUI.SelectionGrid(listRect, m_selectedItemIndex, m_listContent, 1, m_listStyle);
@@ -121,10 +128,8 @@ namespace CustomCar
                 }
             }
 
-            if (done)
+            if (m_done)
                 m_isClickedComboButton = false;
-
-            return m_selectedItemIndex;
         }
 
         public int SelectedItemIndex

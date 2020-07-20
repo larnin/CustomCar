@@ -10,11 +10,13 @@ public class ShaderTool : MonoBehaviour
 
     List<ShaderInfo> m_shaderInfos = null;
 
-    GameObject m_car = null;
-    GameObject m_screen = null;
+    List<GameObject> m_selectedObjects = new List<GameObject>();
     List<Material> m_compatibleMaterials = new List<Material>();
 
     CustomCar.ComboBox m_comboMaterial;
+
+    ControleList<string> m_stringList = new ControleList<string>("0");
+    ControleList<bool> m_focusedList = new ControleList<bool>(false);
 
     public static void Instanciate()
     {
@@ -54,14 +56,14 @@ public class ShaderTool : MonoBehaviour
     
     void Update()
     {
-        if(m_car == null)
-        {
+        if(m_selectedObjects.Count == 0 || m_selectedObjects[0] == null)
+        { 
             FindCar();
-            if (m_car != null)
+            if (m_selectedObjects.Count > 0 && m_selectedObjects[0] != null)
             {
                 m_compatibleMaterials.Clear();
-                UpdateMaterialList(m_car);
-                UpdateMaterialList(m_screen);
+                foreach(var o in m_selectedObjects)
+                    UpdateMaterialList(o);
             }
         }
     }
@@ -76,7 +78,10 @@ public class ShaderTool : MonoBehaviour
 
     void UpdateWindow(int ID)
     {
-        if (m_car == null)
+        m_stringList.ResetIndex();
+        m_focusedList.ResetIndex();
+
+        if (m_selectedObjects.Count == 0 || m_selectedObjects[0] == null)
         {
             GUILayout.Label("No local car found");
         }
@@ -87,9 +92,17 @@ public class ShaderTool : MonoBehaviour
         else
         {
             GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Export"))
+                OnExportClick();
+            if (GUILayout.Button("Import"))
+                OnImportClick();
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
 
             GUILayout.Label("Materials");
             UpdateComboMaterials();
+            int oldComboIndex = m_comboMaterial.SelectedItemIndex;
             int materialIndex = m_comboMaterial.Show();
 
             GUILayout.EndHorizontal();
@@ -102,15 +115,23 @@ public class ShaderTool : MonoBehaviour
                 PrintMaterial(m_compatibleMaterials[materialIndex]);
                 GUILayout.EndScrollView();
             }
+
+            m_comboMaterial.DisplayList();
+            if(m_comboMaterial.SelectedItemIndex != oldComboIndex)
+            {
+                m_stringList.Reset("0");
+                m_focusedList.Reset(false);
+            }
         }
     }
 
     void FindCar()
     {
-        m_car = G.Sys.PlayerManager_?.Current_?.playerData_?.Car_;
-        m_screen = G.Sys.PlayerManager_?.Current_?.playerData_?.CarScreen_;
+        m_selectedObjects.Clear();
+        m_selectedObjects.Add(G.Sys.PlayerManager_?.Current_?.playerData_?.Car_);
+        m_selectedObjects.Add(G.Sys.PlayerManager_?.Current_?.playerData_?.CarScreen_);
 
-        if (m_car != null)
+        if (m_selectedObjects[0] != null)
             Console.Out.WriteLine("Car found");
     }
 
@@ -219,19 +240,14 @@ public class ShaderTool : MonoBehaviour
         GUILayout.BeginHorizontal();
         GUILayout.Label(name + ": ");
 
-        var rText = GUILayout.TextField(color.r.ToString());
-        var gText = GUILayout.TextField(color.g.ToString());
-        var bText = GUILayout.TextField(color.b.ToString());
-        var aText = GUILayout.TextField(color.a.ToString());
-
-        float value = 0;
-        if (float.TryParse(rText, out value))
+        float value;
+        if (ShowFloatField(color.r, out value))
             color.r = value;
-        if (float.TryParse(gText, out value))
+        if (ShowFloatField(color.g, out value))
             color.g = value;
-        if (float.TryParse(bText, out value))
+        if (ShowFloatField(color.b, out value))
             color.b = value;
-        if (float.TryParse(aText, out value))
+        if (ShowFloatField(color.a, out value))
             color.a = value;
 
         m.SetColor(name, color);
@@ -246,10 +262,9 @@ public class ShaderTool : MonoBehaviour
         GUILayout.BeginHorizontal();
         GUILayout.Label(name + ": ");
 
-        var vText = GUILayout.TextField(value.ToString());
-
-        if (float.TryParse(vText, out value))
-            m.SetFloat(name, value);
+        float getValue;
+        if (ShowFloatField(value, out getValue))
+            m.SetFloat(name, getValue);
 
         GUILayout.EndHorizontal();
     }
@@ -261,11 +276,10 @@ public class ShaderTool : MonoBehaviour
         GUILayout.BeginHorizontal();
         GUILayout.Label(name + ": ");
 
-        var vText = GUILayout.TextField(value.ToString());
-
-        if (int.TryParse(vText, out value))
-            m.SetInt(name, value);
-
+        int getValue;
+        if (ShowIntField(value, out getValue))
+            m.SetInt(name, getValue);
+        
         GUILayout.EndHorizontal();
     }
 
@@ -276,23 +290,116 @@ public class ShaderTool : MonoBehaviour
         GUILayout.BeginHorizontal();
         GUILayout.Label(name + ": ");
 
-        var xText = GUILayout.TextField(vector.x.ToString());
-        var yText = GUILayout.TextField(vector.y.ToString());
-        var zText = GUILayout.TextField(vector.z.ToString());
-        var wText = GUILayout.TextField(vector.w.ToString());
-
-        float value = 0;
-        if (float.TryParse(xText, out value))
+        float value;
+        if (ShowFloatField(vector.x, out value))
             vector.x = value;
-        if (float.TryParse(yText, out value))
+        if (ShowFloatField(vector.y, out value))
             vector.y = value;
-        if (float.TryParse(zText, out value))
+        if (ShowFloatField(vector.z, out value))
             vector.z = value;
-        if (float.TryParse(wText, out value))
+        if (ShowFloatField(vector.w, out value))
             vector.w = value;
-
+        
         m.SetVector(name, vector);
 
         GUILayout.EndHorizontal();
+    }
+
+    bool ShowFloatField(float inValue, out float outValue)
+    {
+        int focusIndex = m_focusedList.GetNextIndex();
+        int stringIndex = m_stringList.GetNextIndex();
+
+        var focusName = "Float" + stringIndex.ToString();
+
+        GUI.SetNextControlName(focusName);
+
+        bool hadFocus = m_focusedList.GetItem(focusIndex);
+
+        var value = hadFocus ? m_stringList.GetItem(stringIndex) : inValue.ToString();
+
+        var text = GUILayout.TextField(value);
+
+        bool haveFocus = GUI.GetNameOfFocusedControl() == focusName;
+        m_focusedList.SetItem(focusIndex, haveFocus);
+        m_stringList.SetItem(stringIndex, text);
+
+        bool upDateValue = false;
+
+        if (hadFocus && !haveFocus) //looseFocus
+            upDateValue = true;
+
+        // it doesn't work well
+        //if (haveFocus && Event.current.Equals(Event.KeyboardEvent("return")))
+        //    upDateValue = true;
+
+        if (upDateValue)
+        {
+            float parseValue;
+            if (float.TryParse(text, out parseValue))
+            {
+                outValue = parseValue;
+                m_stringList.SetItem(stringIndex, outValue.ToString());
+                return true;
+            }
+            m_stringList.SetItem(stringIndex, inValue.ToString());
+        }
+
+        outValue = inValue;
+        return false;
+    }
+
+    bool ShowIntField(int inValue, out int outValue)
+    {
+        int focusIndex = m_focusedList.GetNextIndex();
+        int stringIndex = m_stringList.GetNextIndex();
+
+        var focusName = "Int" + stringIndex.ToString();
+
+        GUI.SetNextControlName(focusName);
+
+        bool hadFocus = m_focusedList.GetItem(focusIndex);
+
+        var value = hadFocus ? m_stringList.GetItem(stringIndex) : inValue.ToString();
+
+        var text = GUILayout.TextField(value);
+
+        bool haveFocus = GUI.GetNameOfFocusedControl() == focusName;
+        m_focusedList.SetItem(focusIndex, haveFocus);
+        m_stringList.SetItem(stringIndex, text);
+
+        bool upDateValue = false;
+
+        if (hadFocus && !haveFocus) //looseFocus
+            upDateValue = true;
+
+        // it doesn't work well
+        //if (haveFocus && Event.current.Equals(Event.KeyboardEvent("return")))
+        //    upDateValue = true;
+
+        if (upDateValue)
+        {
+            int parseValue;
+            if (int.TryParse(text, out parseValue))
+            {
+                outValue = parseValue;
+                m_stringList.SetItem(stringIndex, outValue.ToString());
+                return true;
+            }
+            m_stringList.SetItem(stringIndex, inValue.ToString());
+        }
+
+        outValue = inValue;
+        return false;
+    }
+
+    void OnImportClick()
+    {
+
+    }
+
+    void OnExportClick()
+    {
+
     }
 }
