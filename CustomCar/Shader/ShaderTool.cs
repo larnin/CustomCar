@@ -3,10 +3,12 @@ using System.Collections;
 using System;
 using System.Collections.Generic;
 using CustomCar;
+using System.Windows.Forms;
 
 public class ShaderTool : MonoBehaviour
 {
     static ShaderTool m_instance = null;
+    static public ShaderTool instance { get { return m_instance; } }
 
     List<ShaderInfo> m_shaderInfos = null;
 
@@ -14,9 +16,11 @@ public class ShaderTool : MonoBehaviour
     List<Material> m_compatibleMaterials = new List<Material>();
 
     CustomCar.ComboBox m_comboMaterial;
+    Vector2 m_scrollPos = new Vector2();
 
     ControleList<string> m_stringList = new ControleList<string>("0");
     ControleList<bool> m_focusedList = new ControleList<bool>(false);
+
 
     public static void Instanciate()
     {
@@ -70,11 +74,8 @@ public class ShaderTool : MonoBehaviour
 
     void OnGUI()
     {
-        GUILayout.Window(0, new Rect(10, 10, 400, 600), UpdateWindow, "Shader tool", GUILayout.ExpandWidth(true));
-        
+        GUILayout.Window(0, new Rect(10, 10, 400, 600), UpdateWindow, "Shader tool", GUILayout.MaxWidth(400), GUILayout.MaxHeight(600));
     }
-
-    static Vector2 m_scrollPos = new Vector2();
 
     void UpdateWindow(int ID)
     {
@@ -111,7 +112,7 @@ public class ShaderTool : MonoBehaviour
                 GUILayout.Label("Invalid material index");
             else
             {
-                GUILayout.BeginScrollView(m_scrollPos);
+                m_scrollPos = GUILayout.BeginScrollView(m_scrollPos);
                 PrintMaterial(m_compatibleMaterials[materialIndex]);
                 GUILayout.EndScrollView();
             }
@@ -215,6 +216,9 @@ public class ShaderTool : MonoBehaviour
                 case UniformType.Vector:
                     PrintVector(m, u.name);
                     break;
+                case UniformType.Texture:
+                    PrintTexture(m, u.name);
+                    break;
                 default:
                     PrintInvalid(m, u.name);
                     break;
@@ -303,6 +307,52 @@ public class ShaderTool : MonoBehaviour
         m.SetVector(name, vector);
 
         GUILayout.EndHorizontal();
+    }
+
+    void PrintTexture(Material m, string name)
+    {
+        GUILayout.BeginHorizontal();
+        GUILayout.Label(name + ": ");
+
+        if (GUILayout.Button("View"))
+            OnTextureView(m, name);
+
+        if (GUILayout.Button("Select"))
+            OnTextureSelect(m, name);
+
+        GUILayout.EndHorizontal();
+    }
+
+    void OnTextureView(Material m, string name)
+    {
+        var texture = m.GetTexture(name);
+
+        var viewer = TextureViewer.instance;
+        if (viewer == null)
+            TextureViewer.Instanciate();
+        viewer = TextureViewer.instance;
+        if (viewer == null)
+            return;
+        viewer.SetTexture(texture);
+    }
+
+    void OnTextureSelect(Material m, string name)
+    {
+        using (OpenFileDialog dialog = new OpenFileDialog())
+        {
+            dialog.InitialDirectory = "c://";
+            dialog.Filter = "Image files (*.png) | *.png";
+            dialog.RestoreDirectory = true;
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                var texture = Resource.LoadTextureFromFile(dialog.FileName, 1, 1);
+                if(texture != null)
+                {
+                    m.SetTexture(name, texture);
+                }
+            }
+        }
     }
 
     bool ShowFloatField(float inValue, out float outValue)

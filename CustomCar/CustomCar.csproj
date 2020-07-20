@@ -78,6 +78,7 @@
     <Compile Include="Shader\ShaderInfo.cs" />
     <Compile Include="Shader\DebugShaderList.cs" />
     <Compile Include="Shader\ShaderTool.cs" />
+    <Compile Include="Shader\TextureViewer.cs" />
     <Compile Include="Shader\UniformType.cs" />
   </ItemGroup>
   <ItemGroup>
