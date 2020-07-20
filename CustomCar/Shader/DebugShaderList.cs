@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace CustomCar
 {
-    static class ShaderList
+    static class DebugShaderList
     {
         class MaterialInfo
         {
@@ -41,15 +41,15 @@ namespace CustomCar
             var profileManager = G.Sys.ProfileManager_;
             foreach (var c in profileManager.carInfos_)
             {
-                CollectShadersOnObject(c.prefabs_.carPrefab_, shaderList);
-                CollectShadersOnObject(c.prefabs_.cutsceneScreenPrefab_, shaderList);
-                CollectShadersOnObject(c.prefabs_.screenPrefab_, shaderList);
+                CollectShadersOnObject(c.prefabs_.carPrefab_, shaderList, "Car");
+                CollectShadersOnObject(c.prefabs_.cutsceneScreenPrefab_, shaderList, "cutscene");
+                CollectShadersOnObject(c.prefabs_.screenPrefab_, shaderList, "screen");
             }
 
             Print(shaderList, "shaders.txt");
         }
 
-        static void CollectShadersOnObject(GameObject obj, List<ShaderInfo> list)
+        static void CollectShadersOnObject(GameObject obj, List<ShaderInfo> list, string id)
         {
             if (obj == null)
                 return;
@@ -57,7 +57,7 @@ namespace CustomCar
             var renderers = obj.GetComponentsInChildren<Renderer>();
             foreach(var r in renderers)
             {
-                var objName = GetObjectFullName(r.gameObject);
+                var objName = id + "/" + GetObjectFullName(r.gameObject);
                 var mats = r.sharedMaterials;
                 for(int i = 0; i < mats.Length; i++)
                 {

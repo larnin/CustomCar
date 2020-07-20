@@ -13,7 +13,6 @@ namespace CustomCar
     {
         public void Initialize(IManager manager, string ipcIdentifier)
         {
-            ShaderList.Exec();
 
             try
             {
@@ -26,6 +25,8 @@ namespace CustomCar
                 Console.Out.WriteLine(e.ToString());
             }
 
+            //DebugShaderList.Exec();
+            ShaderTool.Instanciate();
             //AudioPlayer.Init();
             
             try

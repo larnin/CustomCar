@@ -73,7 +73,11 @@
     <Compile Include="ModdedCarsColors.cs" />
     <Compile Include="ObjExporter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ShaderList.cs" />
+    <Compile Include="Shader\ComboBox.cs" />
+    <Compile Include="Shader\ShaderInfo.cs" />
+    <Compile Include="Shader\DebugShaderList.cs" />
+    <Compile Include="Shader\ShaderTool.cs" />
+    <Compile Include="Shader\UniformType.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
