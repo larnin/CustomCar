@@ -79,7 +79,7 @@ public class TextureViewer : MonoBehaviour
 
         using (SaveFileDialog dialog = new SaveFileDialog())
         {
-            dialog.InitialDirectory = "c://";
+            dialog.InitialDirectory = "c:\\";
             dialog.Filter = "Image files (*.png) | *.png";
             dialog.RestoreDirectory = true;
 

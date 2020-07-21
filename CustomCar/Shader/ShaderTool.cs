@@ -7,13 +7,20 @@ using System.Windows.Forms;
 
 public class ShaderTool : MonoBehaviour
 {
+    class MaterialInfo
+    {
+        public Material material;
+        public string objectName;
+        public int index;
+    }
+
     static ShaderTool m_instance = null;
     static public ShaderTool instance { get { return m_instance; } }
 
     List<ShaderInfo> m_shaderInfos = null;
 
     List<GameObject> m_selectedObjects = new List<GameObject>();
-    List<Material> m_compatibleMaterials = new List<Material>();
+    List<MaterialInfo> m_compatibleMaterials = new List<MaterialInfo>();
 
     CustomCar.ComboBox m_comboMaterial;
     Vector2 m_scrollPos = new Vector2();
@@ -84,19 +91,27 @@ public class ShaderTool : MonoBehaviour
 
         if (m_selectedObjects.Count == 0 || m_selectedObjects[0] == null)
         {
+            if (GUILayout.Button("Close"))
+                OnClose();
             GUILayout.Label("No local car found");
         }
         else if (m_compatibleMaterials.Count == 0)
         {
+            if (GUILayout.Button("Close"))
+                OnClose();
             GUILayout.Label("No compatible material found");
         }
         else
         {
             GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Close"))
+                OnClose();
             if (GUILayout.Button("Export"))
                 OnExportClick();
             if (GUILayout.Button("Import"))
                 OnImportClick();
+            if (GUILayout.Button(new GUIContent("Apply prefab", "Apply this configuration to the prefab car.\nIt allow to keep theses parameters if the car is destroyed")))
+                OnApplyPrefab();
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
@@ -145,8 +160,10 @@ public class ShaderTool : MonoBehaviour
 
         foreach(var r in renderers)
         {
-            foreach(var m in r.sharedMaterials)
+            for(int i = 0; i < r.sharedMaterials.Length; i++)
             {
+                var m = r.sharedMaterials[i];
+
                 if (m == null || m.shader == null)
                     continue;
 
@@ -156,10 +173,18 @@ public class ShaderTool : MonoBehaviour
                 if (shader == null)
                     continue;
 
-                if (m_compatibleMaterials.Contains(m))
-                    continue;
+                var mat = new MaterialInfo();
+                mat.material = m;
+                mat.index = i;
+                mat.objectName = r.gameObject.FullNameWithoutRoot();
 
-                m_compatibleMaterials.Add(m);
+                if (m_compatibleMaterials.Exists(x => { return x.material == m; }))
+                {
+                    Console.Out.WriteLine("Mat already found");
+                    continue;
+                }
+
+                m_compatibleMaterials.Add(mat);
             }
         }
 
@@ -172,55 +197,56 @@ public class ShaderTool : MonoBehaviour
 
         GUIContent[] comboList = new GUIContent[m_compatibleMaterials.Count];
         for (int i = 0; i < m_compatibleMaterials.Count; i++)
-            comboList[i] = new GUIContent(m_compatibleMaterials[i].name);
+            comboList[i] = new GUIContent(m_compatibleMaterials[i].material.name);
 
         m_comboMaterial.SetContent(comboList);
     }
 
-    void PrintMaterial(Material m)
+    void PrintMaterial(MaterialInfo m)
     {
-        if(m.shader == null)
+        if(m.material.shader == null)
         {
             GUILayout.Label("Null material shader");
             return;
         }
 
-        var s = m_shaderInfos.Find(x => { return x.name == m.shader.name; });
+        var s = m_shaderInfos.Find(x => { return x.name == m.material.shader.name; });
 
         if(s == null)
         {
-            GUILayout.Label("No valid template found for this material shader " + m.shader.name);
+            GUILayout.Label("No valid template found for this material shader " + m.material.shader.name);
             return;
         }
 
         PrintMaterial(m, s);
     }
 
-    void PrintMaterial(Material m, ShaderInfo s)
+    void PrintMaterial(MaterialInfo m, ShaderInfo s)
     {
-        GUILayout.Label("Shader " + s.name);
+        GUILayout.Label("Shader: " + s.name);
+        GUILayout.Label("Object: " + m.objectName + " - " + m.index);
 
         foreach(var u in s.uniforms)
         {
             switch(u.type)
             {
                 case UniformType.Color:
-                    PrintColor(m, u.name);
+                    PrintColor(m.material, u.name);
                     break;
                 case UniformType.Float:
-                    PrintFloat(m, u.name);
+                    PrintFloat(m.material, u.name);
                     break;
                 case UniformType.Int:
-                    PrintInt(m, u.name);
+                    PrintInt(m.material, u.name);
                     break;
                 case UniformType.Vector:
-                    PrintVector(m, u.name);
+                    PrintVector(m.material, u.name);
                     break;
                 case UniformType.Texture:
-                    PrintTexture(m, u.name);
+                    PrintTexture(m.material, u.name);
                     break;
                 default:
-                    PrintInvalid(m, u.name);
+                    PrintInvalid(m.material, u.name);
                     break;
             }
         }
@@ -340,7 +366,7 @@ public class ShaderTool : MonoBehaviour
     {
         using (OpenFileDialog dialog = new OpenFileDialog())
         {
-            dialog.InitialDirectory = "c://";
+            dialog.InitialDirectory = "c:\\";
             dialog.Filter = "Image files (*.png) | *.png";
             dialog.RestoreDirectory = true;
 
@@ -451,5 +477,45 @@ public class ShaderTool : MonoBehaviour
     void OnExportClick()
     {
 
+    }
+
+    void OnApplyPrefab()
+    {
+        var cars = G.Sys.PlayerManager_?.Current_?.playerData_?.carPrefabs_;
+        if (cars == null)
+            return;
+
+        ApplyPrefab(cars.Value.carPrefab_);
+        ApplyPrefab(cars.Value.cutsceneScreenPrefab_);
+        ApplyPrefab(cars.Value.screenPrefab_);
+    }
+
+    void ApplyPrefab(GameObject prefab)
+    {
+        if (prefab == null)
+            return;
+
+        var renderers = prefab.GetComponentsInChildren<Renderer>();
+        foreach(var r in renderers)
+        {
+            var path = r.gameObject.FullNameWithoutRoot();
+            foreach (var m in m_compatibleMaterials)
+            {
+                if(m.objectName == path)
+                {
+                    var materials = r.materials;
+                    if(materials.Length > m.index)
+                    {
+                        materials[m.index] = new Material(m.material);
+                    }
+                    r.materials = materials;
+                }
+            }
+        }
+    }
+
+    void OnClose()
+    {
+        Destroy();
     }
 }
